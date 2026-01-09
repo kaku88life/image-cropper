@@ -5,7 +5,8 @@
   "version": "1.0.0",
   "permissions": [
     "activeTab",
-    "contextMenus"
+    "contextMenus",
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html",
