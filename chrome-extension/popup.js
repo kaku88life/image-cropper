@@ -383,6 +383,13 @@ function resetToUpload() {
 }
 
 function resetAllSettings() {
+    // Visual feedback - button animation
+    resetAllBtn.style.transform = 'rotate(360deg)';
+    resetAllBtn.style.transition = 'transform 0.3s';
+    setTimeout(() => {
+        resetAllBtn.style.transform = '';
+    }, 300);
+
     // Reset ratio to default (16:10)
     document.querySelectorAll('.ratio-option').forEach(opt => {
         opt.classList.remove('active');

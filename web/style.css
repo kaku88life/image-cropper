@@ -30,7 +30,7 @@ body {
 }
 
 .container {
-    max-width: 950px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: 40px 20px;
 }
@@ -53,7 +53,56 @@ header h1 {
     font-size: 1.1rem;
 }
 
-/* Steps */
+/* Editor Layout */
+.editor-layout {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.preview-panel {
+    flex: 1;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.settings-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.panel-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.settings-section h3 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Legacy Steps (for result section) */
 .step {
     background: var(--surface);
     border-radius: var(--radius);
@@ -701,8 +750,7 @@ header h1 {
 
 .format-select,
 .quality-select {
-    flex: 1;
-    min-width: 200px;
+    width: 100%;
 }
 
 .format-select label,
@@ -710,15 +758,16 @@ header h1 {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
+    font-size: 0.85rem;
     color: var(--text-secondary);
 }
 
 .format-select select {
     width: 100%;
-    padding: 12px 16px;
-    border: 2px solid var(--border);
+    padding: 10px 12px;
+    border: 1px solid var(--border);
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.9rem;
     outline: none;
     cursor: pointer;
     background: var(--surface);
@@ -729,10 +778,14 @@ header h1 {
     border-color: var(--primary);
 }
 
+.quality-select {
+    margin-top: 12px;
+}
+
 .quality-select input[type="range"] {
     width: 100%;
-    height: 8px;
-    border-radius: 4px;
+    height: 6px;
+    border-radius: 3px;
     background: var(--border);
     outline: none;
     -webkit-appearance: none;
@@ -740,8 +793,8 @@ header h1 {
 
 .quality-select input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: var(--primary);
     cursor: pointer;
@@ -755,19 +808,20 @@ header h1 {
 /* Export Button */
 .export-btn {
     width: 100%;
-    padding: 16px 24px;
+    padding: 14px 20px;
     background: var(--primary);
     color: white;
     border: none;
     border-radius: var(--radius);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     transition: all 0.2s ease;
+    margin-top: auto;
 }
 
 .export-btn:hover:not(:disabled) {
@@ -790,10 +844,25 @@ header h1 {
 /* Result Section */
 .result-section {
     display: none;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
 }
 
 .result-section.visible {
     display: block;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    .editor-layout {
+        flex-direction: column;
+    }
+
+    .settings-panel {
+        width: 100%;
+    }
 }
 
 .result-preview {

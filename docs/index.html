@@ -14,255 +14,251 @@
         </header>
 
         <main>
-            <!-- 圖片預覽區（最上方） -->
-            <section class="step" id="step-preview">
-                <div class="step-header">
-                    <span class="step-number">1</span>
-                    <h2>圖片預覽</h2>
-                    <button class="reset-btn" id="resetAllBtn" title="重置所有設定">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                            <path d="M3 3v5h5"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- 上傳區域（未上傳時顯示） -->
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-content">
-                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17,8 12,3 7,8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                        <p>拖放圖片至此處</p>
-                        <p class="upload-hint">或點擊選擇檔案，也可以 Ctrl+V 貼上</p>
-                        <input type="file" id="fileInput" accept="image/*" hidden>
-                    </div>
-                </div>
-
-                <!-- 編輯工具列（上傳後顯示） -->
-                <div class="toolbar" id="toolbar">
-                    <!-- 模式切換 -->
-                    <div class="tool-group mode-group">
-                        <button class="mode-btn active" data-tool="crop" title="裁切模式">裁切</button>
-                        <button class="mode-btn" data-tool="draw" title="繪圖模式">繪圖</button>
-                    </div>
-
-                    <!-- 繪圖工具選擇 -->
-                    <div class="tool-group draw-tools" id="drawTools">
-                        <button class="tool-btn" data-shape="pen" title="畫筆">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="highlighter" title="螢光筆">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="m9 11-6 6v3h9l3-3"/>
-                                <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="mosaic" title="馬賽克">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="7" height="7"/>
-                                <rect x="14" y="3" width="7" height="7"/>
-                                <rect x="3" y="14" width="7" height="7"/>
-                                <rect x="14" y="14" width="7" height="7"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="blur" title="模糊">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="3"/>
-                                <circle cx="12" cy="12" r="6" stroke-dasharray="2 2"/>
-                                <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="rect" title="矩形">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="circle" title="圓形">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="9"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="arrow" title="箭頭">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 12h14"/>
-                                <path d="m12 5 7 7-7 7"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="line" title="直線">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M4 20 20 4"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-shape="text" title="文字">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M4 7V4h16v3"/>
-                                <path d="M12 4v16"/>
-                                <path d="M8 20h8"/>
+            <div class="editor-layout">
+                <!-- 左側：圖片預覽區 -->
+                <section class="preview-panel">
+                    <div class="panel-header">
+                        <h2>圖片預覽</h2>
+                        <button class="reset-btn" id="resetAllBtn" title="重置所有設定">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
                             </svg>
                         </button>
                     </div>
 
-                    <!-- 繪圖選項 -->
-                    <div class="tool-group draw-options" id="drawOptions">
-                        <input type="color" id="colorPicker" value="#ff0000" title="顏色">
-                        <div class="stroke-width-wrapper">
-                            <input type="range" id="strokeWidth" min="1" max="30" value="3" title="粗細">
-                            <span id="strokeValue">3</span>
+                    <!-- 上傳區域（未上傳時顯示） -->
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17,8 12,3 7,8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>拖放圖片至此處</p>
+                            <p class="upload-hint">或點擊選擇檔案，也可以 Ctrl+V 貼上</p>
+                            <input type="file" id="fileInput" accept="image/*" hidden>
                         </div>
-                        <label class="fill-option">
-                            <input type="checkbox" id="fillShape">
-                            填滿
-                        </label>
                     </div>
 
-                    <!-- 操作按鈕 -->
-                    <div class="tool-group tool-actions">
-                        <button class="action-btn icon-btn" id="undoBtn" title="上一步" disabled>↶</button>
-                        <button class="action-btn icon-btn" id="redoBtn" title="下一步" disabled>↷</button>
-                        <button class="action-btn" id="clearDrawBtn" title="清除繪圖">清除</button>
-                    </div>
-                </div>
-
-                <!-- 裁切/繪圖區域（上傳後顯示） -->
-                <div class="canvas-container" id="canvasContainer">
-                    <div class="canvas-wrapper" id="canvasWrapper">
-                        <canvas id="mainCanvas"></canvas>
-                        <canvas id="drawCanvas"></canvas>
-                        <div class="crop-box" id="cropBox">
-                            <div class="crop-handle nw" data-handle="nw"></div>
-                            <div class="crop-handle n" data-handle="n"></div>
-                            <div class="crop-handle ne" data-handle="ne"></div>
-                            <div class="crop-handle w" data-handle="w"></div>
-                            <div class="crop-handle e" data-handle="e"></div>
-                            <div class="crop-handle sw" data-handle="sw"></div>
-                            <div class="crop-handle s" data-handle="s"></div>
-                            <div class="crop-handle se" data-handle="se"></div>
+                    <!-- 編輯工具列（上傳後顯示） -->
+                    <div class="toolbar" id="toolbar">
+                        <!-- 模式切換 -->
+                        <div class="tool-group mode-group">
+                            <button class="mode-btn active" data-tool="crop" title="裁切模式">裁切</button>
+                            <button class="mode-btn" data-tool="draw" title="繪圖模式">繪圖</button>
                         </div>
-                        <!-- 文字輸入框 -->
-                        <div class="text-input-container" id="textInputContainer">
-                            <textarea id="textInput" placeholder="輸入文字..."></textarea>
-                            <div class="text-input-actions">
-                                <button class="text-btn" id="textConfirm">確定</button>
-                                <button class="text-btn text-btn-cancel" id="textCancel">取消</button>
+
+                        <!-- 繪圖工具選擇 -->
+                        <div class="tool-group draw-tools" id="drawTools">
+                            <button class="tool-btn" data-shape="pen" title="畫筆">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="highlighter" title="螢光筆">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m9 11-6 6v3h9l3-3"/>
+                                    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="mosaic" title="馬賽克">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="blur" title="模糊">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <circle cx="12" cy="12" r="6" stroke-dasharray="2 2"/>
+                                    <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="rect" title="矩形">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="circle" title="圓形">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="arrow" title="箭頭">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14"/>
+                                    <path d="m12 5 7 7-7 7"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="line" title="直線">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 20 20 4"/>
+                                </svg>
+                            </button>
+                            <button class="tool-btn" data-shape="text" title="文字">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 7V4h16v3"/>
+                                    <path d="M12 4v16"/>
+                                    <path d="M8 20h8"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- 繪圖選項 -->
+                        <div class="tool-group draw-options" id="drawOptions">
+                            <input type="color" id="colorPicker" value="#ff0000" title="顏色">
+                            <div class="stroke-width-wrapper">
+                                <input type="range" id="strokeWidth" min="1" max="30" value="3" title="粗細">
+                                <span id="strokeValue">3</span>
+                            </div>
+                            <label class="fill-option">
+                                <input type="checkbox" id="fillShape">
+                                填滿
+                            </label>
+                        </div>
+
+                        <!-- 操作按鈕 -->
+                        <div class="tool-group tool-actions">
+                            <button class="action-btn icon-btn" id="undoBtn" title="上一步" disabled>↶</button>
+                            <button class="action-btn icon-btn" id="redoBtn" title="下一步" disabled>↷</button>
+                            <button class="action-btn" id="clearDrawBtn" title="清除繪圖">清除</button>
+                        </div>
+                    </div>
+
+                    <!-- 裁切/繪圖區域（上傳後顯示） -->
+                    <div class="canvas-container" id="canvasContainer">
+                        <div class="canvas-wrapper" id="canvasWrapper">
+                            <canvas id="mainCanvas"></canvas>
+                            <canvas id="drawCanvas"></canvas>
+                            <div class="crop-box" id="cropBox">
+                                <div class="crop-handle nw" data-handle="nw"></div>
+                                <div class="crop-handle n" data-handle="n"></div>
+                                <div class="crop-handle ne" data-handle="ne"></div>
+                                <div class="crop-handle w" data-handle="w"></div>
+                                <div class="crop-handle e" data-handle="e"></div>
+                                <div class="crop-handle sw" data-handle="sw"></div>
+                                <div class="crop-handle s" data-handle="s"></div>
+                                <div class="crop-handle se" data-handle="se"></div>
+                            </div>
+                            <!-- 文字輸入框 -->
+                            <div class="text-input-container" id="textInputContainer">
+                                <textarea id="textInput" placeholder="輸入文字..."></textarea>
+                                <div class="text-input-actions">
+                                    <button class="text-btn" id="textConfirm">確定</button>
+                                    <button class="text-btn text-btn-cancel" id="textCancel">取消</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="crop-info" id="cropInfo">
-                    <div class="crop-info-row">
-                        <span>輸出尺寸: <strong id="cropSize">1280 × 800</strong></span>
-                        <button class="change-image-btn" id="changeImageBtn">更換圖片</button>
+                    <div class="crop-info" id="cropInfo">
+                        <div class="crop-info-row">
+                            <span>輸出尺寸: <strong id="cropSize">1280 × 800</strong></span>
+                            <button class="change-image-btn" id="changeImageBtn">更換圖片</button>
+                        </div>
+                        <span class="preview-hint">預覽僅供參考，輸出畫質依原圖解析度</span>
                     </div>
-                    <span class="preview-hint">預覽僅供參考，輸出畫質依原圖解析度</span>
-                </div>
-            </section>
+                </section>
 
-            <!-- 步驟 2: 選擇輸出尺寸 -->
-            <section class="step" id="step-ratio">
-                <div class="step-header">
-                    <span class="step-number">2</span>
-                    <h2>選擇輸出尺寸</h2>
-                </div>
-                <div class="ratio-dropdown-wrapper">
-                    <button class="ratio-dropdown-btn" id="ratioDropdownBtn">
-                        <span class="current-ratio-icon">▬</span>
-                        <span class="current-ratio-text">1280×800 (16:10)</span>
-                        <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </button>
-                    <div class="ratio-dropdown-menu" id="ratioDropdownMenu">
-                        <button class="ratio-option active" data-ratio="16:10">
-                            <span class="ratio-icon">▬</span>
-                            <span class="ratio-label">1280×800</span>
-                            <span class="ratio-size">16:10</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="16:9">
-                            <span class="ratio-icon">▬</span>
-                            <span class="ratio-label">1920×1080</span>
-                            <span class="ratio-size">16:9</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="4:3">
-                            <span class="ratio-icon">▭</span>
-                            <span class="ratio-label">1600×1200</span>
-                            <span class="ratio-size">4:3</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="1:1">
-                            <span class="ratio-icon">◻</span>
-                            <span class="ratio-label">1080×1080</span>
-                            <span class="ratio-size">1:1</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="3:2">
-                            <span class="ratio-icon">▭</span>
-                            <span class="ratio-label">1800×1200</span>
-                            <span class="ratio-size">3:2</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="2:3">
-                            <span class="ratio-icon">▯</span>
-                            <span class="ratio-label">1200×1800</span>
-                            <span class="ratio-size">2:3</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="9:16">
-                            <span class="ratio-icon">▯</span>
-                            <span class="ratio-label">1080×1920</span>
-                            <span class="ratio-size">9:16</span>
-                        </button>
-                        <button class="ratio-option" data-ratio="free">
-                            <span class="ratio-icon">⊞</span>
-                            <span class="ratio-label">自由裁切</span>
-                            <span class="ratio-size">原始尺寸</span>
-                        </button>
-                        <div class="ratio-option custom-ratio-option" data-ratio="custom">
-                            <span class="ratio-icon">⚙</span>
-                            <span class="ratio-label">自訂尺寸</span>
-                            <div class="custom-ratio-inputs">
-                                <input type="number" id="customWidth" placeholder="寬" min="1" value="1280">
-                                <span>×</span>
-                                <input type="number" id="customHeight" placeholder="高" min="1" value="800">
-                                <button class="apply-btn" id="applyCustomRatio">套用</button>
+                <!-- 右側：設定面板 -->
+                <aside class="settings-panel" id="settingsPanel">
+                    <!-- 輸出尺寸 -->
+                    <div class="settings-section">
+                        <h3>輸出尺寸</h3>
+                        <div class="ratio-dropdown-wrapper">
+                            <button class="ratio-dropdown-btn" id="ratioDropdownBtn">
+                                <span class="current-ratio-icon">▬</span>
+                                <span class="current-ratio-text">1280×800 (16:10)</span>
+                                <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                            <div class="ratio-dropdown-menu" id="ratioDropdownMenu">
+                                <button class="ratio-option active" data-ratio="16:10">
+                                    <span class="ratio-icon">▬</span>
+                                    <span class="ratio-label">1280×800</span>
+                                    <span class="ratio-size">16:10</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="16:9">
+                                    <span class="ratio-icon">▬</span>
+                                    <span class="ratio-label">1920×1080</span>
+                                    <span class="ratio-size">16:9</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="4:3">
+                                    <span class="ratio-icon">▭</span>
+                                    <span class="ratio-label">1600×1200</span>
+                                    <span class="ratio-size">4:3</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="1:1">
+                                    <span class="ratio-icon">◻</span>
+                                    <span class="ratio-label">1080×1080</span>
+                                    <span class="ratio-size">1:1</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="3:2">
+                                    <span class="ratio-icon">▭</span>
+                                    <span class="ratio-label">1800×1200</span>
+                                    <span class="ratio-size">3:2</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="2:3">
+                                    <span class="ratio-icon">▯</span>
+                                    <span class="ratio-label">1200×1800</span>
+                                    <span class="ratio-size">2:3</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="9:16">
+                                    <span class="ratio-icon">▯</span>
+                                    <span class="ratio-label">1080×1920</span>
+                                    <span class="ratio-size">9:16</span>
+                                </button>
+                                <button class="ratio-option" data-ratio="free">
+                                    <span class="ratio-icon">⊞</span>
+                                    <span class="ratio-label">自由裁切</span>
+                                    <span class="ratio-size">原始尺寸</span>
+                                </button>
+                                <div class="ratio-option custom-ratio-option" data-ratio="custom">
+                                    <span class="ratio-icon">⚙</span>
+                                    <span class="ratio-label">自訂尺寸</span>
+                                    <div class="custom-ratio-inputs">
+                                        <input type="number" id="customWidth" placeholder="寬" min="1" value="1280">
+                                        <span>×</span>
+                                        <input type="number" id="customHeight" placeholder="高" min="1" value="800">
+                                        <button class="apply-btn" id="applyCustomRatio">套用</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- 步驟 3: 輸出 -->
-            <section class="step" id="step-export">
-                <div class="step-header">
-                    <span class="step-number">3</span>
-                    <h2>輸出設定</h2>
-                </div>
-                <div class="export-options">
-                    <div class="format-select">
-                        <label>輸出格式:</label>
-                        <select id="formatSelect">
-                            <option value="png">PNG (無損)</option>
-                            <option value="jpeg">JPEG (較小檔案)</option>
-                            <option value="webp">WebP (最佳壓縮)</option>
-                        </select>
+                    <!-- 輸出格式 -->
+                    <div class="settings-section">
+                        <h3>輸出格式</h3>
+                        <div class="format-select">
+                            <select id="formatSelect">
+                                <option value="png">PNG (無損)</option>
+                                <option value="jpeg">JPEG (較小檔案)</option>
+                                <option value="webp">WebP (最佳壓縮)</option>
+                            </select>
+                        </div>
+                        <div class="quality-select" id="qualitySelect">
+                            <label>品質: <span id="qualityValue">90</span>%</label>
+                            <input type="range" id="qualitySlider" min="10" max="100" value="90">
+                        </div>
                     </div>
-                    <div class="quality-select" id="qualitySelect">
-                        <label>品質: <span id="qualityValue">90</span>%</label>
-                        <input type="range" id="qualitySlider" min="10" max="100" value="90">
-                    </div>
-                </div>
-                <button class="export-btn" id="completeBtn" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 6L9 17l-5-5"></path>
-                    </svg>
-                    完成
-                </button>
-            </section>
+
+                    <!-- 完成按鈕 -->
+                    <button class="export-btn" id="completeBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 6L9 17l-5-5"></path>
+                        </svg>
+                        完成
+                    </button>
+                </aside>
+            </div>
 
             <!-- 結果預覽區域 -->
-            <section class="step result-section" id="resultSection">
-                <div class="step-header">
-                    <span class="step-number">✓</span>
+            <section class="result-section" id="resultSection">
+                <div class="panel-header">
                     <h2>處理結果</h2>
                 </div>
                 <div class="result-preview">
