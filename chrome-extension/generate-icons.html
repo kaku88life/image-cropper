@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>產生擴充套件圖示</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        .icon-preview { display: flex; gap: 20px; margin: 20px 0; }
+        .icon-box { text-align: center; background: white; padding: 20px; border-radius: 8px; }
+        canvas { border: 1px solid #ddd; }
+        button { padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; margin: 5px; }
+        button:hover { background: #4338ca; }
+        .instructions { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Chrome 擴充套件圖示產生器</h1>
+
+    <div class="icon-preview">
+        <div class="icon-box">
+            <canvas id="icon16" width="16" height="16"></canvas>
+            <p>16x16</p>
+            <button onclick="download('icon16', 16)">下載</button>
+        </div>
+        <div class="icon-box">
+            <canvas id="icon48" width="48" height="48"></canvas>
+            <p>48x48</p>
+            <button onclick="download('icon48', 48)">下載</button>
+        </div>
+        <div class="icon-box">
+            <canvas id="icon128" width="128" height="128"></canvas>
+            <p>128x128</p>
+            <button onclick="download('icon128', 128)">下載</button>
+        </div>
+    </div>
+
+    <button onclick="downloadAll()">下載全部圖示</button>
+
+    <div class="instructions">
+        <h3>使用說明</h3>
+        <ol>
+            <li>點擊「下載全部圖示」按鈕</li>
+            <li>將下載的 PNG 檔案放入 <code>chrome-extension/icons/</code> 資料夾</li>
+            <li>確保檔案名稱為 icon16.png、icon48.png、icon128.png</li>
+        </ol>
+    </div>
+
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const padding = size * 0.1;
+            const innerSize = size - padding * 2;
+
+            // Background
+            ctx.fillStyle = '#4f46e5';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, size * 0.15);
+            ctx.fill();
+
+            // Crop frame
+            const frameX = padding + innerSize * 0.15;
+            const frameY = padding + innerSize * 0.15;
+            const frameW = innerSize * 0.7;
+            const frameH = innerSize * 0.7;
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = Math.max(1, size * 0.06);
+
+            // Draw crop corners
+            const cornerLen = frameW * 0.25;
+
+            // Top-left
+            ctx.beginPath();
+            ctx.moveTo(frameX, frameY + cornerLen);
+            ctx.lineTo(frameX, frameY);
+            ctx.lineTo(frameX + cornerLen, frameY);
+            ctx.stroke();
+
+            // Top-right
+            ctx.beginPath();
+            ctx.moveTo(frameX + frameW - cornerLen, frameY);
+            ctx.lineTo(frameX + frameW, frameY);
+            ctx.lineTo(frameX + frameW, frameY + cornerLen);
+            ctx.stroke();
+
+            // Bottom-left
+            ctx.beginPath();
+            ctx.moveTo(frameX, frameY + frameH - cornerLen);
+            ctx.lineTo(frameX, frameY + frameH);
+            ctx.lineTo(frameX + cornerLen, frameY + frameH);
+            ctx.stroke();
+
+            // Bottom-right
+            ctx.beginPath();
+            ctx.moveTo(frameX + frameW - cornerLen, frameY + frameH);
+            ctx.lineTo(frameX + frameW, frameY + frameH);
+            ctx.lineTo(frameX + frameW, frameY + frameH - cornerLen);
+            ctx.stroke();
+
+            // Center dot
+            if (size >= 48) {
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(size / 2, size / 2, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Draw all icons
+        [16, 48, 128].forEach(size => {
+            const canvas = document.getElementById('icon' + size);
+            drawIcon(canvas, size);
+        });
+
+        function download(id, size) {
+            const canvas = document.getElementById(id);
+            const link = document.createElement('a');
+            link.download = `icon${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadAll() {
+            [16, 48, 128].forEach(size => {
+                setTimeout(() => download('icon' + size, size), size * 5);
+            });
+        }
+    </script>
+</body>
+</html>
