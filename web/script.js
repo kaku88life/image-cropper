@@ -1,7 +1,6 @@
 // DOM Elements
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
-const toolbar = document.getElementById('toolbar');
 const canvasContainer = document.getElementById('canvasContainer');
 const canvasWrapper = document.getElementById('canvasWrapper');
 const mainCanvas = document.getElementById('mainCanvas');
@@ -9,26 +8,53 @@ const drawCanvas = document.getElementById('drawCanvas');
 const resetAllBtn = document.getElementById('resetAllBtn');
 const cropBox = document.getElementById('cropBox');
 const cropSize = document.getElementById('cropSize');
-const cropInfo = document.getElementById('cropInfo');
-const changeImageBtn = document.getElementById('changeImageBtn');
-const formatSelect = document.getElementById('formatSelect');
+const canvasInfo = document.getElementById('canvasInfo');
+const removeImageBtn = document.getElementById('removeImageBtn');
 const qualitySlider = document.getElementById('qualitySlider');
 const qualityValue = document.getElementById('qualityValue');
-const qualitySelect = document.getElementById('qualitySelect');
+const qualityControl = document.getElementById('qualityControl');
 const completeBtn = document.getElementById('completeBtn');
-const resultSection = document.getElementById('resultSection');
 const resultImage = document.getElementById('resultImage');
-const resultFormatSelect = document.getElementById('resultFormatSelect');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
+const floatingContainer = document.getElementById('floatingContainer');
+const floatingBar = document.getElementById('floatingBar');
+const drawToolbar = document.getElementById('drawToolbar');
+
+// Tab elements
+const tabHeader = document.getElementById('tabHeader');
+const editTab = document.getElementById('editTab');
+const resultTab = document.getElementById('resultTab');
+const resultTabBtn = document.getElementById('resultTabBtn');
+
+// Ratio dropdown elements
+const ratioDropdownBtn = document.getElementById('ratioDropdownBtn');
+const ratioDropdownMenu = document.getElementById('ratioDropdownMenu');
+const currentRatioText = document.getElementById('currentRatioText');
+const customWidth = document.getElementById('customWidth');
+const customHeight = document.getElementById('customHeight');
+const applyCustomRatio = document.getElementById('applyCustomRatio');
+
+// Format dropdown elements
+const formatDropdownBtn = document.getElementById('formatDropdownBtn');
+const formatDropdownMenu = document.getElementById('formatDropdownMenu');
+const currentFormatText = document.getElementById('currentFormatText');
 
 // Draw tools elements
 const drawTools = document.getElementById('drawTools');
 const drawOptions = document.getElementById('drawOptions');
 const colorPicker = document.getElementById('colorPicker');
+const colorPickerBtn = document.getElementById('colorPickerBtn');
+const colorPickerPopover = document.getElementById('colorPickerPopover');
+const colorPreview = document.getElementById('colorPreview');
+const colorHexInput = document.getElementById('colorHexInput');
+const hueSlider = document.getElementById('hueSlider');
 const strokeWidth = document.getElementById('strokeWidth');
-const strokeValue = document.getElementById('strokeValue');
+const strokePreview = document.getElementById('strokePreview');
 const fillShape = document.getElementById('fillShape');
+
+// Current color state
+let currentColor = '#ff0000';
 const undoBtn = document.getElementById('undoBtn');
 const redoBtn = document.getElementById('redoBtn');
 const clearDrawBtn = document.getElementById('clearDrawBtn');
@@ -39,13 +65,6 @@ const textInput = document.getElementById('textInput');
 const textConfirm = document.getElementById('textConfirm');
 const textCancel = document.getElementById('textCancel');
 
-// Ratio dropdown elements
-const ratioDropdownBtn = document.getElementById('ratioDropdownBtn');
-const ratioDropdownMenu = document.getElementById('ratioDropdownMenu');
-const customWidth = document.getElementById('customWidth');
-const customHeight = document.getElementById('customHeight');
-const applyCustomRatio = document.getElementById('applyCustomRatio');
-
 // Contexts
 let mainCtx = null;
 let drawCtx = null;
@@ -53,12 +72,13 @@ let drawCtx = null;
 // State
 let image = null;
 let scale = 1;
-let currentMode = 'crop'; // 'crop' or 'draw'
+let currentMode = 'crop';
 let currentShape = 'rect';
-let currentRatio = 16 / 10; // Default: 16:10 (1280x800)
+let currentRatio = 16 / 10;
+let currentFormat = 'png';
 
-// Target output dimensions (exact size for export)
-let targetDimensions = { width: 1280, height: 800 }; // Default: 1280x800
+// Target output dimensions
+let targetDimensions = { width: 1280, height: 800 };
 let imageOffset = { x: 0, y: 0 };
 
 // Crop state
@@ -75,7 +95,7 @@ let drawStart = { x: 0, y: 0 };
 let drawHistory = [];
 let redoHistory = [];
 let currentDrawing = null;
-let penPoints = []; // For freehand drawing
+let penPoints = [];
 let textPosition = { x: 0, y: 0 };
 let currentResultCanvas = null;
 
@@ -94,6 +114,13 @@ function setupEventListeners() {
     uploadArea.addEventListener('drop', handleDrop);
     fileInput.addEventListener('change', handleFileSelect);
     document.addEventListener('paste', handlePaste);
+
+    // Tab switching
+    tabHeader.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn') && !e.target.disabled) {
+            switchTab(e.target.dataset.tab);
+        }
+    });
 
     // Mode selection
     document.querySelectorAll('[data-tool]').forEach(btn => {
@@ -116,12 +143,27 @@ function setupEventListeners() {
     });
     applyCustomRatio.addEventListener('click', applyCustomRatioValue);
 
-    // Close dropdown when clicking outside
+    // Format dropdown
+    formatDropdownBtn.addEventListener('click', toggleFormatDropdown);
+    document.querySelectorAll('.format-option').forEach(option => {
+        option.addEventListener('click', () => selectFormat(option));
+    });
+
+    // Close dropdowns when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.ratio-dropdown-wrapper')) {
             ratioDropdownMenu.classList.remove('visible');
             ratioDropdownBtn.classList.remove('active');
         }
+        if (!e.target.closest('.format-dropdown-wrapper')) {
+            formatDropdownMenu.classList.remove('visible');
+            formatDropdownBtn.classList.remove('active');
+        }
+    });
+
+    // Quality slider
+    qualitySlider.addEventListener('input', () => {
+        qualityValue.textContent = qualitySlider.value + '%';
     });
 
     // Crop box events
@@ -138,16 +180,33 @@ function setupEventListeners() {
     drawCanvas.addEventListener('mousedown', handleDrawMouseDown);
     drawCanvas.addEventListener('touchstart', handleDrawTouchStart);
 
-    // Draw options
-    strokeWidth.addEventListener('input', () => {
-        strokeValue.textContent = strokeWidth.value;
+    // Draw options - Color picker
+    colorPickerBtn.addEventListener('click', toggleColorPicker);
+    colorPicker.addEventListener('input', handleColorPickerChange);
+    colorHexInput.addEventListener('input', handleHexInputChange);
+    colorHexInput.addEventListener('blur', handleHexInputBlur);
+    hueSlider.addEventListener('input', handleHueSliderChange);
+    document.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', () => selectColorSwatch(swatch));
     });
+
+    // Close color picker when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.color-picker-wrapper')) {
+            colorPickerPopover.classList.remove('visible');
+        }
+    });
+
+    // Draw options - Stroke width
+    strokeWidth.addEventListener('input', updateStrokePreview);
+    updateStrokePreview();
+    updateColorPreview('#ff0000');
 
     // Action buttons
     undoBtn.addEventListener('click', undoLastDraw);
     redoBtn.addEventListener('click', redoLastDraw);
     clearDrawBtn.addEventListener('click', clearAllDrawings);
-    changeImageBtn.addEventListener('click', resetToUpload);
+    removeImageBtn.addEventListener('click', resetToUpload);
     resetAllBtn.addEventListener('click', resetAllSettings);
 
     // Text input
@@ -155,10 +214,6 @@ function setupEventListeners() {
     textCancel.addEventListener('click', cancelText);
 
     // Export events
-    formatSelect.addEventListener('change', handleFormatChange);
-    qualitySlider.addEventListener('input', () => {
-        qualityValue.textContent = qualitySlider.value;
-    });
     completeBtn.addEventListener('click', showResult);
     downloadBtn.addEventListener('click', downloadImage);
     copyBtn.addEventListener('click', copyImageToClipboard);
@@ -167,6 +222,15 @@ function setupEventListeners() {
     canvasContainer.addEventListener('dragover', handleCanvasDragOver);
     canvasContainer.addEventListener('dragleave', handleCanvasDragLeave);
     canvasContainer.addEventListener('drop', handleCanvasDrop);
+}
+
+// Tab switching
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    editTab.classList.toggle('active', tabName === 'edit');
+    resultTab.classList.toggle('active', tabName === 'result');
 }
 
 // File handling
@@ -212,7 +276,6 @@ function loadImage(file) {
     reader.onload = (e) => {
         const tempImage = new Image();
         tempImage.onload = () => {
-            // Check if image needs to be scaled up for the default ratio (16:10 = 1280x800)
             ensureMinimumSize(tempImage, 1280, 800, (finalImage) => {
                 image = finalImage;
                 showEditor();
@@ -224,37 +287,28 @@ function loadImage(file) {
     reader.readAsDataURL(file);
 }
 
-// Ensure image is large enough for the target crop dimensions
 function ensureMinimumSize(sourceImage, minWidth, minHeight, callback) {
     const imgWidth = sourceImage.width;
     const imgHeight = sourceImage.height;
-
-    // Calculate required scale to meet minimum dimensions
     const scaleX = minWidth / imgWidth;
     const scaleY = minHeight / imgHeight;
     const requiredScale = Math.max(scaleX, scaleY);
 
-    // If image is already large enough, return as-is
     if (requiredScale <= 1) {
         callback(sourceImage);
         return;
     }
 
-    // Scale up the image
     const newWidth = Math.ceil(imgWidth * requiredScale);
     const newHeight = Math.ceil(imgHeight * requiredScale);
-
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = newWidth;
     tempCanvas.height = newHeight;
     const tempCtx = tempCanvas.getContext('2d');
-
-    // Use better interpolation for upscaling
     tempCtx.imageSmoothingEnabled = true;
     tempCtx.imageSmoothingQuality = 'high';
     tempCtx.drawImage(sourceImage, 0, 0, newWidth, newHeight);
 
-    // Create new image from scaled canvas
     const scaledImage = new Image();
     scaledImage.onload = () => {
         callback(scaledImage);
@@ -264,88 +318,101 @@ function ensureMinimumSize(sourceImage, minWidth, minHeight, callback) {
 
 function showEditor() {
     uploadArea.classList.add('hidden');
-    toolbar.classList.add('visible');
     canvasContainer.classList.add('visible');
     canvasContainer.classList.add('crop-mode');
-    cropInfo.classList.add('visible');
+    canvasInfo.classList.add('visible');
     completeBtn.disabled = false;
+    floatingContainer.classList.add('visible');
+    resultTabBtn.disabled = true;
+    switchTab('edit');
 }
 
 function resetToUpload() {
     image = null;
     uploadArea.classList.remove('hidden');
-    toolbar.classList.remove('visible');
     canvasContainer.classList.remove('visible');
     canvasContainer.classList.remove('crop-mode');
     canvasContainer.classList.remove('draw-mode');
-    cropInfo.classList.remove('visible');
+    canvasInfo.classList.remove('visible');
     completeBtn.disabled = true;
-    resultSection.classList.remove('visible');
+    floatingContainer.classList.remove('visible');
+    floatingContainer.classList.remove('draw-mode');
+    resultTabBtn.disabled = true;
     currentResultCanvas = null;
     fileInput.value = '';
     drawHistory = [];
     redoHistory = [];
+    switchTab('edit');
 
-    // Reset mode
     setMode('crop');
 
-    // Reset ratio to 16:10 (default)
     document.querySelectorAll('.ratio-option').forEach(opt => {
         opt.classList.remove('active');
         if (opt.dataset.ratio === '16:10') opt.classList.add('active');
     });
-    updateRatioButton('16:10', '▬', '1280×800 (16:10)');
+    currentRatioText.textContent = '1280×800';
     currentRatio = 16 / 10;
     targetDimensions = { width: 1280, height: 800 };
 }
 
 function resetAllSettings() {
-    // Visual feedback - button animation
-    resetAllBtn.style.transform = 'rotate(360deg)';
-    resetAllBtn.style.transition = 'transform 0.3s';
-    setTimeout(() => {
-        resetAllBtn.style.transform = '';
-    }, 300);
+    if (resetAllBtn) {
+        resetAllBtn.style.transform = 'rotate(360deg)';
+        resetAllBtn.style.transition = 'transform 0.3s';
+        setTimeout(() => {
+            resetAllBtn.style.transform = '';
+        }, 300);
+    }
 
-    // Reset ratio to default (16:10)
+    // Reset ratio
     document.querySelectorAll('.ratio-option').forEach(opt => {
         opt.classList.remove('active');
         if (opt.dataset.ratio === '16:10') opt.classList.add('active');
     });
-    updateRatioButton('16:10', '▬', '1280×800 (16:10)');
+    currentRatioText.textContent = '1280×800';
     currentRatio = 16 / 10;
     targetDimensions = { width: 1280, height: 800 };
 
-    // Reset mode to crop
+    // Reset format
+    document.querySelectorAll('.format-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.format === 'png');
+    });
+    currentFormatText.textContent = 'PNG';
+    currentFormat = 'png';
+    qualityControl.classList.remove('visible');
+
+    // Reset mode
     setMode('crop');
 
-    // Clear all drawings
+    // Clear drawings
     drawHistory = [];
     redoHistory = [];
     clearDrawCanvas();
     updateUndoRedoButtons();
 
-    // Reset drawing tool settings
+    // Reset drawing tools
     colorPicker.value = '#ff0000';
+    colorHexInput.value = '#FF0000';
+    hueSlider.value = 0;
     strokeWidth.value = 3;
-    strokeValue.textContent = '3';
     fillShape.checked = false;
+    updateColorPreview('#ff0000');
+    updateStrokePreview();
 
-    // Reset crop box if image is loaded
+    // Reset crop box
     if (image) {
         initCropBox();
         mainCtx.drawImage(image, 0, 0, mainCanvas.width, mainCanvas.height);
     }
 
-    // Hide result section
-    resultSection.classList.remove('visible');
+    // Reset to edit tab
+    resultTabBtn.disabled = true;
     currentResultCanvas = null;
+    switchTab('edit');
 
-    // Reset format select
-    formatSelect.value = 'png';
+    // Reset quality
     qualitySlider.value = 90;
-    qualityValue.textContent = '90';
-    handleFormatChange();
+    qualityValue.textContent = '90%';
 }
 
 function setupCanvas() {
@@ -364,11 +431,9 @@ function setupCanvas() {
     drawCanvas.width = displayWidth;
     drawCanvas.height = displayHeight;
 
-    // Position draw canvas
     drawCanvas.style.width = displayWidth + 'px';
     drawCanvas.style.height = displayHeight + 'px';
 
-    // Set wrapper size to match canvas
     canvasWrapper.style.width = displayWidth + 'px';
     canvasWrapper.style.height = displayHeight + 'px';
 
@@ -396,20 +461,14 @@ function initCropBox() {
 function setMode(mode) {
     currentMode = mode;
 
-    // Update tool buttons
     document.querySelectorAll('[data-tool]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tool === mode);
     });
 
-    // Update canvas container classes
     canvasContainer.classList.toggle('crop-mode', mode === 'crop');
     canvasContainer.classList.toggle('draw-mode', mode === 'draw');
+    floatingContainer.classList.toggle('draw-mode', mode === 'draw');
 
-    // Show/hide draw tools
-    drawTools.classList.toggle('visible', mode === 'draw');
-    drawOptions.classList.toggle('visible', mode === 'draw');
-
-    // Set default shape when entering draw mode
     if (mode === 'draw' && !document.querySelector('[data-shape].active')) {
         setShape('pen');
     }
@@ -422,14 +481,101 @@ function setShape(shape) {
     });
 }
 
-// Ratio dropdown handling
+// Color picker functions
+function toggleColorPicker(e) {
+    e.stopPropagation();
+    colorPickerPopover.classList.toggle('visible');
+}
+
+function handleColorPickerChange() {
+    const color = colorPicker.value;
+    updateColorPreview(color);
+    colorHexInput.value = color.toUpperCase();
+    updateSwatchSelection(color);
+}
+
+function handleHexInputChange() {
+    let hex = colorHexInput.value;
+    if (!hex.startsWith('#')) {
+        hex = '#' + hex;
+    }
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        colorPicker.value = hex;
+        updateColorPreview(hex);
+        updateSwatchSelection(hex);
+    }
+}
+
+function handleHexInputBlur() {
+    colorHexInput.value = colorPicker.value.toUpperCase();
+}
+
+function selectColorSwatch(swatch) {
+    const color = swatch.dataset.color;
+    colorPicker.value = color;
+    colorHexInput.value = color.toUpperCase();
+    updateColorPreview(color);
+    updateSwatchSelection(color);
+    colorPickerPopover.classList.remove('visible');
+}
+
+function updateColorPreview(color) {
+    colorPreview.style.background = color;
+    // Also update stroke preview color
+    const strokeDot = strokePreview.querySelector('.stroke-dot');
+    if (strokeDot) {
+        strokeDot.style.background = color;
+    }
+}
+
+function updateSwatchSelection(color) {
+    document.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.classList.toggle('active', swatch.dataset.color.toLowerCase() === color.toLowerCase());
+    });
+}
+
+// Hue slider handler
+function handleHueSliderChange() {
+    const hue = parseInt(hueSlider.value);
+    const color = hslToHex(hue, 100, 50);
+    colorPicker.value = color;
+    colorHexInput.value = color.toUpperCase();
+    updateColorPreview(color);
+    updateSwatchSelection(color);
+}
+
+// Convert HSL to HEX
+function hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function updateStrokePreview() {
+    const size = Math.min(Math.max(parseInt(strokeWidth.value), 1), 28);
+    const strokeDot = strokePreview.querySelector('.stroke-dot');
+    if (strokeDot) {
+        strokeDot.style.width = size + 'px';
+        strokeDot.style.height = size + 'px';
+        strokeDot.style.background = colorPicker.value;
+    }
+}
+
+// Ratio dropdown
 function toggleRatioDropdown(e) {
     e.stopPropagation();
     ratioDropdownMenu.classList.toggle('visible');
     ratioDropdownBtn.classList.toggle('active');
+    formatDropdownMenu.classList.remove('visible');
+    formatDropdownBtn.classList.remove('active');
 }
 
-// Predefined target dimensions for each ratio
 const ratioDimensions = {
     '16:10': { width: 1280, height: 800 },
     '16:9': { width: 1920, height: 1080 },
@@ -442,24 +588,20 @@ const ratioDimensions = {
 
 function selectRatio(option) {
     const ratio = option.dataset.ratio;
+    if (ratio === 'custom') return;
 
-    if (ratio === 'custom') return; // Custom is handled by apply button
-
-    // Update active state
     document.querySelectorAll('.ratio-option').forEach(opt => opt.classList.remove('active'));
     option.classList.add('active');
 
-    // Apply ratio and set target dimensions
     if (ratio === 'free') {
         currentRatio = null;
         targetDimensions = null;
-        updateRatioButton(ratio, '⊞', '自由裁切');
+        currentRatioText.textContent = '自由';
     } else {
         const [w, h] = ratio.split(':').map(Number);
         currentRatio = w / h;
         targetDimensions = ratioDimensions[ratio] || { width: w * 100, height: h * 100 };
-        const icon = option.querySelector('.ratio-icon').textContent;
-        updateRatioButton(ratio, icon, `${targetDimensions.width}×${targetDimensions.height} (${ratio})`);
+        currentRatioText.textContent = `${targetDimensions.width}×${targetDimensions.height}`;
     }
 
     if (image) {
@@ -467,14 +609,8 @@ function selectRatio(option) {
         updateCropBox();
     }
 
-    // Close dropdown
     ratioDropdownMenu.classList.remove('visible');
     ratioDropdownBtn.classList.remove('active');
-}
-
-function updateRatioButton(ratio, icon, label) {
-    document.querySelector('.current-ratio-icon').textContent = icon;
-    document.querySelector('.current-ratio-text').textContent = label;
 }
 
 function applyCustomRatioValue(e) {
@@ -482,25 +618,50 @@ function applyCustomRatioValue(e) {
     const w = parseInt(customWidth.value) || 800;
     const h = parseInt(customHeight.value) || 600;
 
-    // Use the input values directly as target dimensions
     targetDimensions = { width: w, height: h };
     currentRatio = w / h;
 
-    // Update active state
     document.querySelectorAll('.ratio-option').forEach(opt => opt.classList.remove('active'));
     document.querySelector('.custom-ratio-option').classList.add('active');
 
-    // Update button
-    updateRatioButton('custom', '⚙', `${w}×${h}`);
+    currentRatioText.textContent = `${w}×${h}`;
 
     if (image) {
         applyCropRatio();
         updateCropBox();
     }
 
-    // Close dropdown
     ratioDropdownMenu.classList.remove('visible');
     ratioDropdownBtn.classList.remove('active');
+}
+
+// Format dropdown
+function toggleFormatDropdown(e) {
+    e.stopPropagation();
+    formatDropdownMenu.classList.toggle('visible');
+    formatDropdownBtn.classList.toggle('active');
+    ratioDropdownMenu.classList.remove('visible');
+    ratioDropdownBtn.classList.remove('active');
+}
+
+function selectFormat(option) {
+    const format = option.dataset.format;
+    currentFormat = format;
+
+    document.querySelectorAll('.format-option').forEach(opt => opt.classList.remove('active'));
+    option.classList.add('active');
+
+    currentFormatText.textContent = format.toUpperCase();
+
+    // Show/hide quality control
+    if (format === 'png') {
+        qualityControl.classList.remove('visible');
+    } else {
+        qualityControl.classList.add('visible');
+    }
+
+    formatDropdownMenu.classList.remove('visible');
+    formatDropdownBtn.classList.remove('active');
 }
 
 function applyCropRatio() {
@@ -535,11 +696,9 @@ function updateCropBox() {
     cropBox.style.width = `${cropState.width}px`;
     cropBox.style.height = `${cropState.height}px`;
 
-    // Show target output size if set, otherwise show actual crop dimensions
     if (targetDimensions) {
         cropSize.textContent = `${targetDimensions.width} × ${targetDimensions.height}`;
     } else {
-        // Free crop - show actual dimensions
         const actualWidth = Math.round(cropState.width / scale);
         const actualHeight = Math.round(cropState.height / scale);
         cropSize.textContent = `${actualWidth} × ${actualHeight}`;
@@ -547,10 +706,8 @@ function updateCropBox() {
 }
 
 function constrainCropBox() {
-    // 先確保尺寸不超過畫布
     cropState.width = Math.max(30, Math.min(cropState.width, mainCanvas.width));
     cropState.height = Math.max(30, Math.min(cropState.height, mainCanvas.height));
-    // 再約束位置
     cropState.x = Math.max(0, Math.min(cropState.x, mainCanvas.width - cropState.width));
     cropState.y = Math.max(0, Math.min(cropState.y, mainCanvas.height - cropState.height));
 }
@@ -603,7 +760,6 @@ function handleDrawMouseDown(e) {
     isDrawing = true;
     penPoints = [{ x, y }];
 
-    // Clear redo history when starting new drawing
     redoHistory = [];
     updateUndoRedoButtons();
 }
@@ -668,16 +824,13 @@ function handleCropMove(clientX, clientY) {
 }
 
 function handleDrawMove(x, y) {
-    // Add point for pen/highlighter
     if (currentShape === 'pen' || currentShape === 'highlighter') {
         penPoints.push({ x, y });
     }
 
-    // Clear and redraw preview
     clearDrawCanvas();
     redrawHistory();
 
-    // Draw current shape preview
     const color = colorPicker.value;
     const lineWidth = parseInt(strokeWidth.value);
     const fill = fillShape.checked;
@@ -720,7 +873,6 @@ function finalizeDrawing(endX, endY) {
     const lineWidth = parseInt(strokeWidth.value);
     const fill = fillShape.checked;
 
-    // Save to history
     if (currentShape === 'pen' || currentShape === 'highlighter') {
         drawHistory.push({
             shape: currentShape,
@@ -742,7 +894,6 @@ function finalizeDrawing(endX, endY) {
         });
     }
 
-    // Redraw everything
     clearDrawCanvas();
     redrawHistory();
 
@@ -795,12 +946,9 @@ function resizeCropBox(dx, dy) {
             break;
     }
 
-    // 自由調整，不鎖定比例
-    // 確保最小尺寸
     newWidth = Math.max(minSize, newWidth);
     newHeight = Math.max(minSize, newHeight);
 
-    // 確保不超出畫布邊界
     if (newX < 0) {
         newWidth += newX;
         newX = 0;
@@ -816,7 +964,6 @@ function resizeCropBox(dx, dy) {
         newHeight = mainCanvas.height - newY;
     }
 
-    // 再次確保最小尺寸
     if (newWidth >= minSize) {
         cropState.x = newX;
         cropState.width = newWidth;
@@ -925,7 +1072,6 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Normalize coordinates for shapes that need it
     const minX = Math.min(x1, x2);
     const minY = Math.min(y1, y2);
     const maxX = Math.max(x1, x2);
@@ -981,13 +1127,11 @@ function drawArrow(ctx, x1, y1, x2, y2, lineWidth) {
     const headLength = Math.max(lineWidth * 3, 15);
     const angle = Math.atan2(y2 - y1, x2 - x1);
 
-    // Draw line
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
 
-    // Draw arrowhead
     ctx.beginPath();
     ctx.moveTo(x2, y2);
     ctx.lineTo(x2 - headLength * Math.cos(angle - Math.PI / 6), y2 - headLength * Math.sin(angle - Math.PI / 6));
@@ -999,7 +1143,6 @@ function drawArrow(ctx, x1, y1, x2, y2, lineWidth) {
 function applyMosaic(ctx, x, y, width, height) {
     if (width < 5 || height < 5) return;
 
-    // Ensure coordinates are within canvas bounds
     const canvasX = Math.max(0, Math.floor(x));
     const canvasY = Math.max(0, Math.floor(y));
     const canvasW = Math.min(Math.floor(width), mainCanvas.width - canvasX);
@@ -1008,17 +1151,13 @@ function applyMosaic(ctx, x, y, width, height) {
     if (canvasW <= 0 || canvasH <= 0) return;
 
     const blockSize = 10;
-
-    // Get image data from main canvas
     const imageData = mainCtx.getImageData(canvasX, canvasY, canvasW, canvasH);
     const data = imageData.data;
 
-    // Apply mosaic effect
     for (let py = 0; py < canvasH; py += blockSize) {
         for (let px = 0; px < canvasW; px += blockSize) {
             let r = 0, g = 0, b = 0, count = 0;
 
-            // Calculate average color for block
             for (let dy = 0; dy < blockSize && py + dy < canvasH; dy++) {
                 for (let dx = 0; dx < blockSize && px + dx < canvasW; dx++) {
                     const i = ((py + dy) * canvasW + (px + dx)) * 4;
@@ -1034,7 +1173,6 @@ function applyMosaic(ctx, x, y, width, height) {
                 g = Math.round(g / count);
                 b = Math.round(b / count);
 
-                // Draw block
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
                 ctx.fillRect(canvasX + px, canvasY + py,
                     Math.min(blockSize, canvasW - px),
@@ -1047,7 +1185,6 @@ function applyMosaic(ctx, x, y, width, height) {
 function applyBlur(ctx, x, y, width, height) {
     if (width < 5 || height < 5) return;
 
-    // Ensure coordinates are within canvas bounds
     const canvasX = Math.max(0, Math.floor(x));
     const canvasY = Math.max(0, Math.floor(y));
     const canvasW = Math.min(Math.floor(width), mainCanvas.width - canvasX);
@@ -1055,12 +1192,10 @@ function applyBlur(ctx, x, y, width, height) {
 
     if (canvasW <= 0 || canvasH <= 0) return;
 
-    // Get image data from main canvas
     const imageData = mainCtx.getImageData(canvasX, canvasY, canvasW, canvasH);
     const data = imageData.data;
     const blurRadius = 5;
 
-    // Simple box blur
     const output = new Uint8ClampedArray(data);
 
     for (let py = 0; py < canvasH; py++) {
@@ -1089,7 +1224,6 @@ function applyBlur(ctx, x, y, width, height) {
         }
     }
 
-    // Draw blurred area
     const blurredData = new ImageData(output, canvasW, canvasH);
     ctx.putImageData(blurredData, canvasX, canvasY);
 }
@@ -1127,17 +1261,7 @@ function updateUndoRedoButtons() {
     redoBtn.disabled = redoHistory.length === 0;
 }
 
-// Export
-function handleFormatChange() {
-    const format = formatSelect.value;
-    if (format === 'png') {
-        qualitySelect.style.display = 'none';
-    } else {
-        qualitySelect.style.display = 'block';
-    }
-}
-
-// Canvas drag-drop handlers for replacing image
+// Canvas drag-drop handlers
 function handleCanvasDragOver(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -1157,12 +1281,12 @@ function handleCanvasDrop(e) {
 
     const files = e.dataTransfer.files;
     if (files.length > 0 && files[0].type.startsWith('image/')) {
-        // Clear existing drawings and load new image
         drawHistory = [];
         redoHistory = [];
         updateUndoRedoButtons();
-        resultSection.classList.remove('visible');
+        resultTabBtn.disabled = true;
         currentResultCanvas = null;
+        switchTab('edit');
         loadImage(files[0]);
     }
 }
@@ -1171,30 +1295,25 @@ function handleCanvasDrop(e) {
 function generateResultCanvas() {
     if (!image) return null;
 
-    // Calculate crop area in original image coordinates
     const actualX = cropState.x / scale;
     const actualY = cropState.y / scale;
     const actualWidth = cropState.width / scale;
     const actualHeight = cropState.height / scale;
 
-    // Determine final output dimensions
     const finalWidth = targetDimensions ? targetDimensions.width : Math.round(actualWidth);
     const finalHeight = targetDimensions ? targetDimensions.height : Math.round(actualHeight);
 
-    // Create temporary canvas for cropping at original resolution
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = actualWidth;
     tempCanvas.height = actualHeight;
 
-    // Draw original image cropped
     tempCtx.drawImage(
         image,
         actualX, actualY, actualWidth, actualHeight,
         0, 0, actualWidth, actualHeight
     );
 
-    // Draw drawings scaled to crop area
     if (drawHistory.length > 0) {
         for (const item of drawHistory) {
             tempCtx.save();
@@ -1221,17 +1340,13 @@ function generateResultCanvas() {
         }
     }
 
-    // Create final output canvas at exact target dimensions
     const outputCanvas = document.createElement('canvas');
     const outputCtx = outputCanvas.getContext('2d');
     outputCanvas.width = finalWidth;
     outputCanvas.height = finalHeight;
 
-    // Use high quality interpolation for resizing
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = 'high';
-
-    // Draw the cropped image scaled to exact target dimensions
     outputCtx.drawImage(tempCanvas, 0, 0, finalWidth, finalHeight);
 
     return outputCanvas;
@@ -1250,25 +1365,22 @@ function showResult() {
     currentResultCanvas = generateResultCanvas();
     if (!currentResultCanvas) return;
 
-    // 同步格式選擇器
-    resultFormatSelect.value = formatSelect.value;
-
-    // 顯示預覽圖
     resultImage.src = currentResultCanvas.toDataURL('image/png');
-    resultSection.classList.add('visible');
-
-    // 滾動到結果區域
-    resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    resultTabBtn.disabled = false;
+    switchTab('result');
 }
 
 function downloadImage() {
-    if (!currentResultCanvas) return;
+    if (!image) return;
 
-    const format = resultFormatSelect.value;
-    const { mimeType, extension } = getFormatInfo(format);
+    // Generate result canvas on-the-fly
+    const canvas = generateResultCanvas();
+    if (!canvas) return;
+
+    const { mimeType, extension } = getFormatInfo(currentFormat);
     const quality = qualitySlider.value / 100;
 
-    const dataUrl = currentResultCanvas.toDataURL(mimeType, quality);
+    const dataUrl = canvas.toDataURL(mimeType, quality);
     const link = document.createElement('a');
     link.download = `edited-image.${extension}`;
     link.href = dataUrl;
@@ -1276,36 +1388,32 @@ function downloadImage() {
 }
 
 async function copyImageToClipboard() {
-    if (!currentResultCanvas) return;
+    if (!image) return;
 
     try {
-        // 使用 PNG 格式複製（剪貼簿相容性最好）
-        const dataUrl = currentResultCanvas.toDataURL('image/png');
+        // Generate result canvas on-the-fly
+        const canvas = generateResultCanvas();
+        if (!canvas) return;
+
+        const dataUrl = canvas.toDataURL('image/png');
         const response = await fetch(dataUrl);
         const blob = await response.blob();
 
-        // 複製到剪貼簿
         await navigator.clipboard.write([
             new ClipboardItem({
                 'image/png': blob
             })
         ]);
 
-        // 顯示成功提示
-        copyBtn.style.color = '#22c55e';
-        copyBtn.style.borderColor = '#22c55e';
+        copyBtn.classList.add('success');
         setTimeout(() => {
-            copyBtn.style.color = '';
-            copyBtn.style.borderColor = '';
+            copyBtn.classList.remove('success');
         }, 1500);
     } catch (err) {
         console.error('複製失敗:', err);
-        // 顯示失敗提示
-        copyBtn.style.color = '#ef4444';
-        copyBtn.style.borderColor = '#ef4444';
+        copyBtn.classList.add('error');
         setTimeout(() => {
-            copyBtn.style.color = '';
-            copyBtn.style.borderColor = '';
+            copyBtn.classList.remove('error');
         }, 1500);
     }
 }

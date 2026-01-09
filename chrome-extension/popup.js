@@ -6,7 +6,6 @@ const canvasContainer = document.getElementById('canvasContainer');
 const canvasWrapper = document.getElementById('canvasWrapper');
 const mainCanvas = document.getElementById('mainCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
-const resetAllBtn = document.getElementById('resetAllBtn');
 const cropBox = document.getElementById('cropBox');
 const cropSize = document.getElementById('cropSize');
 const cropInfo = document.getElementById('cropInfo');
@@ -235,7 +234,6 @@ function setupEventListeners() {
     clearBtn.addEventListener('click', clearAllDrawings);
     changeImageBtn.addEventListener('click', resetToUpload);
     removeImageBtn.addEventListener('click', resetToUpload);
-    resetAllBtn.addEventListener('click', resetAllSettings);
 
     // Stroke width preview
     strokeWidth.addEventListener('input', updateStrokePreview);
@@ -250,6 +248,11 @@ function setupEventListeners() {
     completeBtn.addEventListener('click', showResult);
     downloadBtn.addEventListener('click', downloadImage);
     copyBtn.addEventListener('click', copyImageToClipboard);
+
+    // Canvas drag-drop for replacing image
+    canvasContainer.addEventListener('dragover', handleCanvasDragOver);
+    canvasContainer.addEventListener('dragleave', handleCanvasDragLeave);
+    canvasContainer.addEventListener('drop', handleCanvasDrop);
 }
 
 // File handling
@@ -305,6 +308,36 @@ function loadImage(file) {
         tempImage.src = e.target.result;
     };
     reader.readAsDataURL(file);
+}
+
+// Canvas drag-drop handlers for replacing image
+function handleCanvasDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    canvasContainer.classList.add('drag-over');
+}
+
+function handleCanvasDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    canvasContainer.classList.remove('drag-over');
+}
+
+function handleCanvasDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    canvasContainer.classList.remove('drag-over');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+        // Clear existing drawings and load new image
+        drawHistory = [];
+        redoHistory = [];
+        updateUndoRedoButtons();
+        resultSection.classList.remove('visible');
+        currentResultCanvas = null;
+        loadImage(files[0]);
+    }
 }
 
 // Ensure image is large enough for the target crop dimensions
@@ -380,56 +413,6 @@ function resetToUpload() {
     document.querySelector('.current-ratio').textContent = '1280×800';
     currentRatio = 16 / 10;
     targetDimensions = { width: 1280, height: 800 };
-}
-
-function resetAllSettings() {
-    // Visual feedback - button animation
-    resetAllBtn.style.transform = 'rotate(360deg)';
-    resetAllBtn.style.transition = 'transform 0.3s';
-    setTimeout(() => {
-        resetAllBtn.style.transform = '';
-    }, 300);
-
-    // Reset ratio to default (16:10)
-    document.querySelectorAll('.ratio-option').forEach(opt => {
-        opt.classList.remove('active');
-        if (opt.dataset.ratio === '16:10') opt.classList.add('active');
-    });
-    document.querySelector('.current-ratio').textContent = '1280×800';
-    currentRatio = 16 / 10;
-    targetDimensions = { width: 1280, height: 800 };
-
-    // Reset mode to crop
-    setMode('crop');
-
-    // Clear all drawings
-    drawHistory = [];
-    redoHistory = [];
-    clearDrawCanvas();
-    updateUndoRedoButtons();
-
-    // Reset drawing tool settings
-    colorPicker.value = '#000000';
-    strokeWidth.value = 3;
-    fillShape.checked = false;
-    updateStrokePreview();
-
-    // Reset fill toggle button
-    const fillToggle = document.getElementById('fillToggle');
-    if (fillToggle) fillToggle.classList.remove('active');
-
-    // Reset crop box if image is loaded
-    if (image) {
-        initCropBox();
-        redrawMainCanvas();
-    }
-
-    // Hide result section
-    resultSection.classList.remove('visible');
-    currentResultCanvas = null;
-
-    // Reset format select
-    formatSelect.value = 'png';
 }
 
 function setupCanvas() {

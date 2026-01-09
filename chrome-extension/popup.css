@@ -44,34 +44,6 @@ header h1 {
     font-weight: 600;
 }
 
-.reset-btn {
-    position: absolute;
-    right: 0;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: all 0.2s;
-}
-
-.reset-btn:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: var(--primary-light);
-}
-
-.reset-btn svg {
-    width: 14px;
-    height: 14px;
-}
-
 /* Preview Section */
 .preview-section {
     margin-bottom: 10px;
@@ -419,6 +391,27 @@ header h1 {
 
 .canvas-container.visible {
     display: flex;
+}
+
+/* Canvas drag-over state for replacing image */
+.canvas-container.drag-over {
+    outline: 3px dashed var(--primary);
+    outline-offset: -3px;
+}
+
+.canvas-container.drag-over::after {
+    content: '放開以更換圖片';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(79, 70, 229, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    z-index: 100;
 }
 
 /* Canvas Wrapper - wraps canvas and overlays together */
