@@ -96,6 +96,38 @@ function init() {
     mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
     drawCtx = drawCanvas.getContext('2d', { willReadFrequently: true });
     setupEventListeners();
+    checkForStoredImage();
+}
+
+// Check if there's a stored image from context menu
+function checkForStoredImage() {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get(['imageToLoad'], (result) => {
+            if (result.imageToLoad) {
+                loadImageFromUrl(result.imageToLoad);
+                // Clear the stored image and badge
+                chrome.storage.local.remove('imageToLoad');
+                chrome.action.setBadgeText({ text: '' });
+            }
+        });
+    }
+}
+
+// Load image from URL
+function loadImageFromUrl(url) {
+    const tempImage = new Image();
+    tempImage.crossOrigin = 'anonymous';
+    tempImage.onload = () => {
+        ensureMinimumSize(tempImage, targetDimensions.width, targetDimensions.height, (finalImage) => {
+            image = finalImage;
+            showEditor();
+            setupCanvas();
+        });
+    };
+    tempImage.onerror = () => {
+        console.error('Failed to load image from URL');
+    };
+    tempImage.src = url;
 }
 
 function setupEventListeners() {
