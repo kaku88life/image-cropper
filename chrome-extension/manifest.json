@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "圖片裁切工具",
   "description": "快速裁切圖片，支援多種比例選擇",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "permissions": [
     "activeTab",
     "contextMenus",
