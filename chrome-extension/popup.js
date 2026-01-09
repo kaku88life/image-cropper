@@ -253,6 +253,10 @@ function setupEventListeners() {
     canvasContainer.addEventListener('dragover', handleCanvasDragOver);
     canvasContainer.addEventListener('dragleave', handleCanvasDragLeave);
     canvasContainer.addEventListener('drop', handleCanvasDrop);
+
+    // Result image drag events
+    resultImage.addEventListener('dragstart', handleResultDragStart);
+    resultImage.addEventListener('dragend', handleResultDragEnd);
 }
 
 // File handling
@@ -338,6 +342,33 @@ function handleCanvasDrop(e) {
         currentResultCanvas = null;
         loadImage(files[0]);
     }
+}
+
+// Result image drag handlers
+function handleResultDragStart(e) {
+    if (!currentResultCanvas) return;
+
+    resultImage.classList.add('dragging');
+
+    // Get format settings
+    const format = resultFormatSelect.value;
+    const { mimeType } = getFormatInfo(format);
+    const quality = 0.9;
+
+    // Create data URL for the image
+    const dataUrl = currentResultCanvas.toDataURL(mimeType, quality);
+
+    // Set drag data
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/uri-list', dataUrl);
+    e.dataTransfer.setData('text/plain', dataUrl);
+
+    // Create drag image
+    e.dataTransfer.setDragImage(resultImage, resultImage.width / 2, resultImage.height / 2);
+}
+
+function handleResultDragEnd(e) {
+    resultImage.classList.remove('dragging');
 }
 
 // Ensure image is large enough for the target crop dimensions

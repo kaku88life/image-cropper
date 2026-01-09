@@ -803,11 +803,13 @@ header h1 {
 }
 
 .result-preview {
+    position: relative;
     background: #1e293b;
     border-radius: 6px;
     padding: 8px;
     margin-bottom: 10px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 }
@@ -817,6 +819,28 @@ header h1 {
     max-height: 180px;
     border-radius: 4px;
     object-fit: contain;
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.result-preview img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.result-preview img:active {
+    cursor: grabbing;
+}
+
+.result-preview img.dragging {
+    opacity: 0.6;
+    transform: scale(0.98);
+}
+
+.drag-hint {
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .result-actions {
