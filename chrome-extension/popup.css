@@ -30,7 +30,10 @@ body {
 
 /* Header */
 header {
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
     margin-bottom: 10px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
@@ -39,6 +42,34 @@ header {
 header h1 {
     font-size: 1rem;
     font-weight: 600;
+}
+
+.reset-btn {
+    position: absolute;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.reset-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
+.reset-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
 /* Preview Section */

@@ -6,6 +6,7 @@ const canvasContainer = document.getElementById('canvasContainer');
 const canvasWrapper = document.getElementById('canvasWrapper');
 const mainCanvas = document.getElementById('mainCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
+const resetAllBtn = document.getElementById('resetAllBtn');
 const cropBox = document.getElementById('cropBox');
 const cropSize = document.getElementById('cropSize');
 const cropInfo = document.getElementById('cropInfo');
@@ -202,6 +203,7 @@ function setupEventListeners() {
     clearBtn.addEventListener('click', clearAllDrawings);
     changeImageBtn.addEventListener('click', resetToUpload);
     removeImageBtn.addEventListener('click', resetToUpload);
+    resetAllBtn.addEventListener('click', resetAllSettings);
 
     // Stroke width preview
     strokeWidth.addEventListener('input', updateStrokePreview);
@@ -346,6 +348,49 @@ function resetToUpload() {
     document.querySelector('.current-ratio').textContent = '1280×800';
     currentRatio = 16 / 10;
     targetDimensions = { width: 1280, height: 800 };
+}
+
+function resetAllSettings() {
+    // Reset ratio to default (16:10)
+    document.querySelectorAll('.ratio-option').forEach(opt => {
+        opt.classList.remove('active');
+        if (opt.dataset.ratio === '16:10') opt.classList.add('active');
+    });
+    document.querySelector('.current-ratio').textContent = '1280×800';
+    currentRatio = 16 / 10;
+    targetDimensions = { width: 1280, height: 800 };
+
+    // Reset mode to crop
+    setMode('crop');
+
+    // Clear all drawings
+    drawHistory = [];
+    redoHistory = [];
+    clearDrawCanvas();
+    updateUndoRedoButtons();
+
+    // Reset drawing tool settings
+    colorPicker.value = '#000000';
+    strokeWidth.value = 3;
+    fillShape.checked = false;
+    updateStrokePreview();
+
+    // Reset fill toggle button
+    const fillToggle = document.getElementById('fillToggle');
+    if (fillToggle) fillToggle.classList.remove('active');
+
+    // Reset crop box if image is loaded
+    if (image) {
+        initCropBox();
+        redrawMainCanvas();
+    }
+
+    // Hide result section
+    resultSection.classList.remove('visible');
+    currentResultCanvas = null;
+
+    // Reset format select
+    formatSelect.value = 'png';
 }
 
 function setupCanvas() {
