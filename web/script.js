@@ -222,6 +222,10 @@ function setupEventListeners() {
     canvasContainer.addEventListener('dragover', handleCanvasDragOver);
     canvasContainer.addEventListener('dragleave', handleCanvasDragLeave);
     canvasContainer.addEventListener('drop', handleCanvasDrop);
+
+    // Result image drag events
+    resultImage.addEventListener('dragstart', handleResultDragStart);
+    resultImage.addEventListener('dragend', handleResultDragEnd);
 }
 
 // Tab switching
@@ -1289,6 +1293,34 @@ function handleCanvasDrop(e) {
         switchTab('edit');
         loadImage(files[0]);
     }
+}
+
+// Result image drag handlers
+function handleResultDragStart(e) {
+    if (!currentResultCanvas) return;
+
+    resultImage.classList.add('dragging');
+
+    // Get format and quality settings
+    const { mimeType } = getFormatInfo(currentFormat);
+    const quality = qualitySlider.value / 100;
+
+    // Create data URL for the image
+    const dataUrl = currentResultCanvas.toDataURL(mimeType, quality);
+
+    // Set drag data
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/uri-list', dataUrl);
+    e.dataTransfer.setData('text/plain', dataUrl);
+
+    // Create drag image
+    const dragImg = new Image();
+    dragImg.src = dataUrl;
+    e.dataTransfer.setDragImage(resultImage, resultImage.width / 2, resultImage.height / 2);
+}
+
+function handleResultDragEnd(e) {
+    resultImage.classList.remove('dragging');
 }
 
 // Export functions
