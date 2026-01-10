@@ -1921,17 +1921,17 @@ footer {
 .floating-bar .custom-ratio-inputs {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 .floating-bar .custom-ratio-inputs input {
-    width: 60px;
-    padding: 6px 8px;
+    width: 70px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 4px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     text-align: center;
 }
 
