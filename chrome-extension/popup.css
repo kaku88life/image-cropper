@@ -253,6 +253,14 @@ header h1 {
 .crop-handle.s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
 .crop-handle.se { bottom: -5px; right: -5px; cursor: se-resize; }
 
+/* Preview Hint */
+.preview-hint {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
 /* Crop Settings */
 .crop-settings {
     margin-bottom: 8px;
