@@ -414,7 +414,7 @@ function ensureMinimumSize(sourceImage, minWidth, minHeight, callback) {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = newWidth;
     tempCanvas.height = newHeight;
-    const tempCtx = tempCanvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
     // Use better interpolation for upscaling
     tempCtx.imageSmoothingEnabled = true;
@@ -1097,7 +1097,7 @@ function applyFillBucket(x, y) {
     const resultCanvas = document.createElement('canvas');
     resultCanvas.width = width;
     resultCanvas.height = height;
-    const resultCtx = resultCanvas.getContext('2d');
+    const resultCtx = resultCanvas.getContext('2d', { willReadFrequently: true });
     resultCtx.putImageData(imageData, 0, 0);
 
     // 只保留填充的部分（與原始不同的像素）
@@ -1371,7 +1371,7 @@ function generateResultCanvas() {
 
     // Create temporary canvas for cropping at original resolution
     const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
     tempCanvas.width = actualWidth;
     tempCanvas.height = actualHeight;
 
@@ -1403,7 +1403,7 @@ function generateResultCanvas() {
                 const fillCanvas = document.createElement('canvas');
                 fillCanvas.width = item.imageData.width;
                 fillCanvas.height = item.imageData.height;
-                const fillCtx = fillCanvas.getContext('2d');
+                const fillCtx = fillCanvas.getContext('2d', { willReadFrequently: true });
                 fillCtx.putImageData(item.imageData, 0, 0);
 
                 // 計算裁切區域在填充畫布中的位置
@@ -1427,7 +1427,7 @@ function generateResultCanvas() {
 
     // Create final output canvas at exact target dimensions
     const outputCanvas = document.createElement('canvas');
-    const outputCtx = outputCanvas.getContext('2d');
+    const outputCtx = outputCanvas.getContext('2d', { willReadFrequently: true });
     outputCanvas.width = finalWidth;
     outputCanvas.height = finalHeight;
 

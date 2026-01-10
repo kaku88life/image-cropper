@@ -308,7 +308,7 @@ function ensureMinimumSize(sourceImage, minWidth, minHeight, callback) {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = newWidth;
     tempCanvas.height = newHeight;
-    const tempCtx = tempCanvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
     tempCtx.imageSmoothingEnabled = true;
     tempCtx.imageSmoothingQuality = 'high';
     tempCtx.drawImage(sourceImage, 0, 0, newWidth, newHeight);
@@ -1339,7 +1339,7 @@ function generateResultCanvas() {
     const finalHeight = targetDimensions ? targetDimensions.height : Math.round(actualHeight);
 
     const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
     tempCanvas.width = actualWidth;
     tempCanvas.height = actualHeight;
 
@@ -1376,7 +1376,7 @@ function generateResultCanvas() {
     }
 
     const outputCanvas = document.createElement('canvas');
-    const outputCtx = outputCanvas.getContext('2d');
+    const outputCtx = outputCanvas.getContext('2d', { willReadFrequently: true });
     outputCanvas.width = finalWidth;
     outputCanvas.height = finalHeight;
 
