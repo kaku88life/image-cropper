@@ -255,8 +255,10 @@ function setupEventListeners() {
     canvasContainer.addEventListener('drop', handleCanvasDrop);
 
     // Result image drag events
-    resultImage.addEventListener('dragstart', handleResultDragStart);
-    resultImage.addEventListener('dragend', handleResultDragEnd);
+    if (resultImage) {
+        resultImage.addEventListener('dragstart', handleResultDragStart);
+        resultImage.addEventListener('dragend', handleResultDragEnd);
+    }
 }
 
 // File handling
@@ -346,7 +348,7 @@ function handleCanvasDrop(e) {
 
 // Result image drag handlers
 function handleResultDragStart(e) {
-    if (!currentResultCanvas) return;
+    if (!currentResultCanvas || !resultImage) return;
 
     resultImage.classList.add('dragging');
 
@@ -368,6 +370,7 @@ function handleResultDragStart(e) {
 }
 
 function handleResultDragEnd(e) {
+    if (!resultImage) return;
     resultImage.classList.remove('dragging');
 }
 
