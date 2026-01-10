@@ -46,6 +46,15 @@ header h1 {
     font-weight: 700;
     color: var(--text);
     margin-bottom: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.title-icon {
+    width: 41px;
+    height: 41px;
+    object-fit: contain;
 }
 
 .subtitle {

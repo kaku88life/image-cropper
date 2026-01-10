@@ -41,6 +41,15 @@ header {
 header h1 {
     font-size: 0.95rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.title-icon {
+    width: 23px;
+    height: 23px;
+    object-fit: contain;
 }
 
 .web-link-btn {
