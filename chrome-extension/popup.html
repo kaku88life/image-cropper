@@ -216,6 +216,17 @@
                         <span class="dropdown-arrow">▼</span>
                     </button>
                     <div class="ratio-dropdown-menu" id="ratioDropdownMenu">
+                        <div class="ratio-option custom-ratio-option" data-ratio="custom">
+                            <span>自訂尺寸</span>
+                            <div class="custom-ratio-inputs">
+                                <input type="number" id="customWidth" placeholder="寬" min="1" value="1280">
+                                <span>×</span>
+                                <input type="number" id="customHeight" placeholder="高" min="1" value="800">
+                                <button class="apply-btn" id="applyCustomRatio">套用</button>
+                            </div>
+                        </div>
+                        <button class="ratio-option" data-ratio="free">自由裁切</button>
+                        <div class="ratio-divider"></div>
                         <button class="ratio-option active" data-ratio="16:10">1280×800 (16:10)</button>
                         <button class="ratio-option" data-ratio="16:9">1920×1080 (16:9)</button>
                         <button class="ratio-option" data-ratio="4:3">1600×1200 (4:3)</button>
@@ -223,7 +234,6 @@
                         <button class="ratio-option" data-ratio="3:2">1800×1200 (3:2)</button>
                         <button class="ratio-option" data-ratio="2:3">1200×1800 (2:3)</button>
                         <button class="ratio-option" data-ratio="9:16">1080×1920 (9:16)</button>
-                        <button class="ratio-option" data-ratio="free">自由裁切</button>
                     </div>
                 </div>
 

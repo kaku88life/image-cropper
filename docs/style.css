@@ -1906,6 +1906,12 @@ footer {
     font-size: 0.8rem;
 }
 
+.floating-bar .ratio-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
 /* Custom ratio inputs in floating bar */
 .floating-bar .custom-ratio-option {
     flex-wrap: wrap;

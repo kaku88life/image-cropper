@@ -39,6 +39,9 @@ const textCancel = document.getElementById('textCancel');
 // Ratio dropdown elements
 const ratioDropdownBtn = document.getElementById('ratioDropdownBtn');
 const ratioDropdownMenu = document.getElementById('ratioDropdownMenu');
+const customWidthInput = document.getElementById('customWidth');
+const customHeightInput = document.getElementById('customHeight');
+const applyCustomRatioBtn = document.getElementById('applyCustomRatio');
 
 // Tool dropdown elements
 const penDropdownBtn = document.getElementById('penDropdownBtn');
@@ -150,8 +153,17 @@ function setupEventListeners() {
 
     // Ratio dropdown
     ratioDropdownBtn.addEventListener('click', toggleRatioDropdown);
-    document.querySelectorAll('.ratio-option').forEach(option => {
+    document.querySelectorAll('.ratio-option:not(.custom-ratio-option)').forEach(option => {
         option.addEventListener('click', () => selectRatio(option));
+    });
+
+    // Custom ratio
+    if (applyCustomRatioBtn) {
+        applyCustomRatioBtn.addEventListener('click', applyCustomRatio);
+    }
+    // Prevent dropdown close when clicking inside custom inputs
+    document.querySelectorAll('.custom-ratio-inputs').forEach(el => {
+        el.addEventListener('click', (e) => e.stopPropagation());
     });
 
     // Close dropdown when clicking outside
@@ -557,6 +569,27 @@ function selectRatio(option) {
         targetDimensions = ratioDimensions[ratio] || { width: w * 100, height: h * 100 };
         document.querySelector('.current-ratio').textContent = `${targetDimensions.width}×${targetDimensions.height}`;
     }
+
+    if (image) {
+        applyCropRatio();
+        updateCropBox();
+    }
+
+    ratioDropdownMenu.classList.remove('visible');
+    ratioDropdownBtn.classList.remove('active');
+}
+
+function applyCustomRatio() {
+    const width = parseInt(customWidthInput.value) || 1280;
+    const height = parseInt(customHeightInput.value) || 800;
+
+    if (width < 1 || height < 1) return;
+
+    document.querySelectorAll('.ratio-option').forEach(opt => opt.classList.remove('active'));
+
+    currentRatio = width / height;
+    targetDimensions = { width, height };
+    document.querySelector('.current-ratio').textContent = `${width}×${height}`;
 
     if (image) {
         applyCropRatio();
