@@ -19,6 +19,7 @@ const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const resultDownloadBtn = document.getElementById('resultDownloadBtn');
 const resultCopyBtn = document.getElementById('resultCopyBtn');
+const resultCloseBtn = document.getElementById('resultCloseBtn');
 const floatingContainer = document.getElementById('floatingContainer');
 const floatingBar = document.getElementById('floatingBar');
 const drawToolbar = document.getElementById('drawToolbar');
@@ -51,10 +52,22 @@ const colorPickerBtn = document.getElementById('colorPickerBtn');
 const colorPickerPopover = document.getElementById('colorPickerPopover');
 const colorPreview = document.getElementById('colorPreview');
 const colorHexInput = document.getElementById('colorHexInput');
+const colorCodeDisplay = document.getElementById('colorCodeDisplay');
 const hueSlider = document.getElementById('hueSlider');
 const strokeWidth = document.getElementById('strokeWidth');
 const strokePreview = document.getElementById('strokePreview');
-const fillShape = document.getElementById('fillShape');
+const textSizeSelect = document.getElementById('textSizeSelect');
+const textSizeInput = document.getElementById('textSizeInput');
+
+// Tool dropdown elements
+const penDropdown = document.getElementById('penDropdown');
+const penDropdownBtn = document.getElementById('penDropdownBtn');
+const penMenu = document.getElementById('penMenu');
+const penIcon = document.getElementById('penIcon');
+const shapeDropdown = document.getElementById('shapeDropdown');
+const shapeDropdownBtn = document.getElementById('shapeDropdownBtn');
+const shapeMenu = document.getElementById('shapeMenu');
+const shapeIcon = document.getElementById('shapeIcon');
 
 // Current color state
 let currentColor = '#ff0000';
@@ -101,6 +114,7 @@ let currentDrawing = null;
 let penPoints = [];
 let textPosition = { x: 0, y: 0 };
 let currentResultCanvas = null;
+let currentResultBlob = null;
 
 // Initialize
 function init() {
@@ -130,10 +144,29 @@ function setupEventListeners() {
         btn.addEventListener('click', () => setMode(btn.dataset.tool));
     });
 
-    // Shape selection
+    // Shape selection (both tool-btn and tool-option)
     document.querySelectorAll('[data-shape]').forEach(btn => {
-        btn.addEventListener('click', () => setShape(btn.dataset.shape));
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setShape(btn.dataset.shape);
+        });
     });
+
+    // Tool dropdown buttons
+    if (penDropdownBtn) {
+        penDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            penMenu.classList.toggle('visible');
+            shapeMenu?.classList.remove('visible');
+        });
+    }
+    if (shapeDropdownBtn) {
+        shapeDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            shapeMenu.classList.toggle('visible');
+            penMenu?.classList.remove('visible');
+        });
+    }
 
     // Ratio dropdown
     ratioDropdownBtn.addEventListener('click', toggleRatioDropdown);
@@ -161,6 +194,11 @@ function setupEventListeners() {
         if (!e.target.closest('.format-dropdown-wrapper')) {
             formatDropdownMenu.classList.remove('visible');
             formatDropdownBtn.classList.remove('active');
+        }
+        // Close tool dropdowns
+        if (!e.target.closest('.tool-dropdown')) {
+            penMenu?.classList.remove('visible');
+            shapeMenu?.classList.remove('visible');
         }
     });
 
@@ -216,6 +254,23 @@ function setupEventListeners() {
     textConfirm.addEventListener('click', confirmText);
     textCancel.addEventListener('click', cancelText);
 
+    // Text size sync
+    if (textSizeSelect) {
+        textSizeSelect.addEventListener('change', () => {
+            if (textSizeInput) textSizeInput.value = textSizeSelect.value;
+        });
+    }
+    if (textSizeInput) {
+        textSizeInput.addEventListener('input', () => {
+            const val = parseInt(textSizeInput.value) || 36;
+            // Update select if matching option exists
+            const option = textSizeSelect?.querySelector(`option[value="${val}"]`);
+            if (option) {
+                textSizeSelect.value = val;
+            }
+        });
+    }
+
     // Export events
     completeBtn.addEventListener('click', showResult);
     downloadBtn.addEventListener('click', downloadImage);
@@ -224,6 +279,7 @@ function setupEventListeners() {
     // Result page download/copy buttons
     if (resultDownloadBtn) resultDownloadBtn.addEventListener('click', downloadResultImage);
     if (resultCopyBtn) resultCopyBtn.addEventListener('click', copyResultImageToClipboard);
+    if (resultCloseBtn) resultCloseBtn.addEventListener('click', closeResult);
 
     // Canvas drag-drop for replacing image
     canvasContainer.addEventListener('dragover', handleCanvasDragOver);
@@ -242,6 +298,14 @@ function switchTab(tabName) {
     });
     editTab.classList.toggle('active', tabName === 'edit');
     resultTab.classList.toggle('active', tabName === 'result');
+}
+
+// Close result and go back to edit
+function closeResult() {
+    switchTab('edit');
+    resultImage.src = '';
+    currentResultCanvas = null;
+    currentResultBlob = null;
 }
 
 // File handling
@@ -350,6 +414,7 @@ function resetToUpload() {
     floatingContainer.classList.remove('draw-mode');
     resultTabBtn.disabled = true;
     currentResultCanvas = null;
+    currentResultBlob = null;
     fileInput.value = '';
     drawHistory = [];
     redoHistory = [];
@@ -419,6 +484,7 @@ function resetAllSettings() {
     // Reset to edit tab
     resultTabBtn.disabled = true;
     currentResultCanvas = null;
+    currentResultBlob = null;
     switchTab('edit');
 
     // Reset quality
@@ -487,9 +553,43 @@ function setMode(mode) {
 
 function setShape(shape) {
     currentShape = shape;
-    document.querySelectorAll('[data-shape]').forEach(btn => {
+
+    const penShapes = ['pen', 'marker', 'highlighter', 'eraser'];
+    const geometryShapes = ['rect', 'circle', 'arrow', 'line'];
+
+    // Update active states
+    document.querySelectorAll('.tool-option').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.shape === shape);
     });
+    document.querySelectorAll('.tool-btn[data-shape]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.shape === shape);
+    });
+
+    // Update dropdown button states
+    if (penDropdownBtn) {
+        penDropdownBtn.classList.toggle('active', penShapes.includes(shape));
+    }
+    if (shapeDropdownBtn) {
+        shapeDropdownBtn.classList.toggle('active', geometryShapes.includes(shape));
+    }
+
+    // Update dropdown icons based on selected shape
+    if (penShapes.includes(shape) && penIcon) {
+        const selectedOption = penMenu?.querySelector(`[data-shape="${shape}"] svg`);
+        if (selectedOption) {
+            penIcon.innerHTML = selectedOption.outerHTML;
+        }
+    }
+    if (geometryShapes.includes(shape) && shapeIcon) {
+        const selectedOption = shapeMenu?.querySelector(`[data-shape="${shape}"] svg`);
+        if (selectedOption) {
+            shapeIcon.innerHTML = selectedOption.outerHTML;
+        }
+    }
+
+    // Close dropdown menus
+    penMenu?.classList.remove('visible');
+    shapeMenu?.classList.remove('visible');
 }
 
 // Color picker functions
@@ -532,6 +632,10 @@ function selectColorSwatch(swatch) {
 
 function updateColorPreview(color) {
     colorPreview.style.background = color;
+    // Update color code display
+    if (colorCodeDisplay) {
+        colorCodeDisplay.textContent = color.toUpperCase();
+    }
     // Also update stroke preview color
     const strokeDot = strokePreview.querySelector('.stroke-dot');
     if (strokeDot) {
@@ -766,6 +870,11 @@ function handleDrawMouseDown(e) {
         return;
     }
 
+    if (currentShape === 'fill') {
+        applyFillBucket(x, y);
+        return;
+    }
+
     drawStart.x = x;
     drawStart.y = y;
     isDrawing = true;
@@ -785,6 +894,11 @@ function handleDrawTouchStart(e) {
 
     if (currentShape === 'text') {
         showTextInput(x, y);
+        return;
+    }
+
+    if (currentShape === 'fill') {
+        applyFillBucket(x, y);
         return;
     }
 
@@ -835,7 +949,8 @@ function handleCropMove(clientX, clientY) {
 }
 
 function handleDrawMove(x, y) {
-    if (currentShape === 'pen' || currentShape === 'highlighter') {
+    const brushTypes = ['pen', 'marker', 'watercolor', 'crayon', 'highlighter', 'eraser', 'mosaic', 'blur'];
+    if (brushTypes.includes(currentShape)) {
         penPoints.push({ x, y });
     }
 
@@ -844,12 +959,17 @@ function handleDrawMove(x, y) {
 
     const color = colorPicker.value;
     const lineWidth = parseInt(strokeWidth.value);
-    const fill = fillShape.checked;
 
-    if (currentShape === 'pen' || currentShape === 'highlighter') {
-        drawPenStroke(drawCtx, penPoints, color, lineWidth, currentShape === 'highlighter');
+    if (brushTypes.includes(currentShape)) {
+        if (currentShape === 'mosaic') {
+            drawMosaicBrushDisplay(drawCtx, penPoints, lineWidth);
+        } else if (currentShape === 'blur') {
+            drawBlurBrushDisplay(drawCtx, penPoints, lineWidth);
+        } else {
+            drawPenStroke(drawCtx, penPoints, color, lineWidth, currentShape);
+        }
     } else {
-        drawShape(drawCtx, currentShape, drawStart.x, drawStart.y, x, y, color, lineWidth, fill);
+        drawShape(drawCtx, currentShape, drawStart.x, drawStart.y, x, y, color, lineWidth, false);
     }
 }
 
@@ -882,15 +1002,15 @@ function finalizeDrawing(endX, endY) {
 
     const color = colorPicker.value;
     const lineWidth = parseInt(strokeWidth.value);
-    const fill = fillShape.checked;
+    const brushTypes = ['pen', 'marker', 'watercolor', 'crayon', 'highlighter', 'eraser', 'mosaic', 'blur'];
 
-    if (currentShape === 'pen' || currentShape === 'highlighter') {
+    if (brushTypes.includes(currentShape)) {
         drawHistory.push({
             shape: currentShape,
             points: [...penPoints],
             color,
             lineWidth,
-            isHighlighter: currentShape === 'highlighter'
+            penType: currentShape
         });
     } else {
         drawHistory.push({
@@ -901,7 +1021,7 @@ function finalizeDrawing(endX, endY) {
             y2: endY,
             color,
             lineWidth,
-            fill
+            fill: false
         });
     }
 
@@ -1059,7 +1179,7 @@ function confirmText() {
     const text = textInput.value.trim();
     if (text) {
         const color = colorPicker.value;
-        const fontSize = parseInt(strokeWidth.value) * 4 + 12;
+        const fontSize = parseInt(textSizeInput?.value || textSizeSelect?.value || 36);
 
         drawHistory.push({
             shape: 'text',
@@ -1088,9 +1208,19 @@ function clearDrawCanvas() {
 }
 
 function redrawHistory() {
+    const brushTypes = ['pen', 'marker', 'watercolor', 'crayon', 'highlighter', 'eraser'];
     for (const item of drawHistory) {
-        if (item.shape === 'pen' || item.shape === 'highlighter') {
-            drawPenStroke(drawCtx, item.points, item.color, item.lineWidth, item.isHighlighter);
+        if (item.shape === 'fillBucket') {
+            // Restore fill bucket image data
+            if (item.imageData) {
+                drawCtx.putImageData(item.imageData, 0, 0);
+            }
+        } else if (brushTypes.includes(item.shape)) {
+            drawPenStroke(drawCtx, item.points, item.color, item.lineWidth, item.penType || item.shape);
+        } else if (item.shape === 'mosaic') {
+            applyMosaicBrush(drawCtx, item.points, item.lineWidth);
+        } else if (item.shape === 'blur') {
+            applyBlurBrush(drawCtx, item.points, item.lineWidth);
         } else if (item.shape === 'text') {
             drawText(drawCtx, item.text, item.x, item.y, item.color, item.fontSize);
         } else {
@@ -1099,17 +1229,46 @@ function redrawHistory() {
     }
 }
 
-function drawPenStroke(ctx, points, color, lineWidth, isHighlighter) {
+function drawPenStroke(ctx, points, color, lineWidth, penType) {
     if (points.length < 2) return;
 
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.lineWidth = isHighlighter ? lineWidth * 3 : lineWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (isHighlighter) {
-        ctx.globalAlpha = 0.4;
+    // Handle legacy isHighlighter boolean
+    if (penType === true) penType = 'highlighter';
+    if (penType === false) penType = 'pen';
+
+    switch (penType) {
+        case 'highlighter':
+            ctx.lineWidth = lineWidth * 3;
+            ctx.globalAlpha = 0.4;
+            break;
+        case 'marker':
+            ctx.lineWidth = lineWidth * 1.5;
+            ctx.globalAlpha = 0.85;
+            break;
+        case 'watercolor':
+            ctx.lineWidth = lineWidth * 2;
+            ctx.globalAlpha = 0.3;
+            break;
+        case 'crayon':
+            ctx.lineWidth = lineWidth * 1.8;
+            ctx.globalAlpha = 0.7;
+            // Add texture effect for crayon
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 1;
+            break;
+        case 'eraser':
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.lineWidth = lineWidth * 2;
+            ctx.globalAlpha = 1;
+            break;
+        default: // pen
+            ctx.lineWidth = lineWidth;
+            ctx.globalAlpha = 0.9;
     }
 
     ctx.beginPath();
@@ -1136,7 +1295,11 @@ function drawText(ctx, text, x, y, color, fontSize) {
     ctx.restore();
 }
 
-function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
+function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill, sourceCtx = null) {
+    if (shape === 'blur' || shape === 'mosaic') {
+        console.log('drawShape:', shape, 'x1:', x1, 'y1:', y1, 'x2:', x2, 'y2:', y2, 'hasSourceCtx:', !!sourceCtx);
+    }
+
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = lineWidth;
@@ -1149,6 +1312,10 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
     const maxY = Math.max(y1, y2);
     const width = maxX - minX;
     const height = maxY - minY;
+
+    if (shape === 'blur' || shape === 'mosaic') {
+        console.log('drawShape calculated:', 'minX:', minX, 'minY:', minY, 'width:', width, 'height:', height);
+    }
 
     switch (shape) {
         case 'rect':
@@ -1185,11 +1352,11 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
             break;
 
         case 'mosaic':
-            applyMosaic(ctx, minX, minY, width, height);
+            applyMosaic(ctx, minX, minY, width, height, sourceCtx);
             break;
 
         case 'blur':
-            applyBlur(ctx, minX, minY, width, height);
+            applyBlur(ctx, minX, minY, width, height, sourceCtx);
             break;
     }
 }
@@ -1211,18 +1378,45 @@ function drawArrow(ctx, x1, y1, x2, y2, lineWidth) {
     ctx.stroke();
 }
 
-function applyMosaic(ctx, x, y, width, height) {
-    if (width < 5 || height < 5) return;
+function applyMosaic(ctx, x, y, width, height, sourceCtx = null) {
+    console.log('applyMosaic called:', { x, y, width, height, hasSourceCtx: !!sourceCtx });
 
-    const canvasX = Math.max(0, Math.floor(x));
-    const canvasY = Math.max(0, Math.floor(y));
-    const canvasW = Math.min(Math.floor(width), mainCanvas.width - canvasX);
-    const canvasH = Math.min(Math.floor(height), mainCanvas.height - canvasY);
+    if (width < 5 || height < 5) {
+        console.log('applyMosaic: early return - size too small');
+        return;
+    }
 
-    if (canvasW <= 0 || canvasH <= 0) return;
+    const source = sourceCtx || mainCtx;
+    const sourceCanvas = source.canvas;
+
+    console.log('applyMosaic: sourceCanvas dimensions:', sourceCanvas.width, 'x', sourceCanvas.height);
+
+    // Calculate the visible portion within canvas bounds
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+    const endX = Math.floor(x + width);
+    const endY = Math.floor(y + height);
+
+    // Clip to canvas bounds
+    const canvasX = Math.max(0, startX);
+    const canvasY = Math.max(0, startY);
+    const canvasEndX = Math.min(sourceCanvas.width, endX);
+    const canvasEndY = Math.min(sourceCanvas.height, endY);
+
+    const canvasW = canvasEndX - canvasX;
+    const canvasH = canvasEndY - canvasY;
+
+    console.log('applyMosaic: clipped region:', { canvasX, canvasY, canvasEndX, canvasEndY, canvasW, canvasH });
+
+    if (canvasW <= 0 || canvasH <= 0) {
+        console.log('applyMosaic: early return - clipped size is zero or negative');
+        return;
+    }
 
     const blockSize = 10;
-    const imageData = mainCtx.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyMosaic: about to getImageData');
+    const imageData = source.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyMosaic: got imageData, size:', imageData.data.length);
     const data = imageData.data;
 
     for (let py = 0; py < canvasH; py += blockSize) {
@@ -1253,17 +1447,44 @@ function applyMosaic(ctx, x, y, width, height) {
     }
 }
 
-function applyBlur(ctx, x, y, width, height) {
-    if (width < 5 || height < 5) return;
+function applyBlur(ctx, x, y, width, height, sourceCtx = null) {
+    console.log('applyBlur called:', { x, y, width, height, hasSourceCtx: !!sourceCtx });
 
-    const canvasX = Math.max(0, Math.floor(x));
-    const canvasY = Math.max(0, Math.floor(y));
-    const canvasW = Math.min(Math.floor(width), mainCanvas.width - canvasX);
-    const canvasH = Math.min(Math.floor(height), mainCanvas.height - canvasY);
+    if (width < 5 || height < 5) {
+        console.log('applyBlur: early return - size too small');
+        return;
+    }
 
-    if (canvasW <= 0 || canvasH <= 0) return;
+    const source = sourceCtx || mainCtx;
+    const sourceCanvas = source.canvas;
 
-    const imageData = mainCtx.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyBlur: sourceCanvas dimensions:', sourceCanvas.width, 'x', sourceCanvas.height);
+
+    // Calculate the visible portion within canvas bounds
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+    const endX = Math.floor(x + width);
+    const endY = Math.floor(y + height);
+
+    // Clip to canvas bounds
+    const canvasX = Math.max(0, startX);
+    const canvasY = Math.max(0, startY);
+    const canvasEndX = Math.min(sourceCanvas.width, endX);
+    const canvasEndY = Math.min(sourceCanvas.height, endY);
+
+    const canvasW = canvasEndX - canvasX;
+    const canvasH = canvasEndY - canvasY;
+
+    console.log('applyBlur: clipped region:', { canvasX, canvasY, canvasEndX, canvasEndY, canvasW, canvasH });
+
+    if (canvasW <= 0 || canvasH <= 0) {
+        console.log('applyBlur: early return - clipped size is zero or negative');
+        return;
+    }
+
+    console.log('applyBlur: about to getImageData');
+    const imageData = source.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyBlur: got imageData, size:', imageData.data.length);
     const data = imageData.data;
     const blurRadius = 5;
 
@@ -1296,7 +1517,545 @@ function applyBlur(ctx, x, y, width, height) {
     }
 
     const blurredData = new ImageData(output, canvasW, canvasH);
+    console.log('applyBlur: about to putImageData at', canvasX, canvasY);
     ctx.putImageData(blurredData, canvasX, canvasY);
+    console.log('applyBlur: completed successfully');
+}
+
+// Brush-style mosaic display (preview while drawing)
+function drawMosaicBrushDisplay(ctx, points, lineWidth) {
+    if (points.length < 1) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
+    ctx.lineWidth = lineWidth * 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+// Brush-style blur display (preview while drawing)
+function drawBlurBrushDisplay(ctx, points, lineWidth) {
+    if (points.length < 1) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
+    ctx.lineWidth = lineWidth * 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+// Apply mosaic brush effect along path (optimized with pre-computed mask)
+function applyMosaicBrush(ctx, points, lineWidth) {
+    if (!points || points.length < 2) return;
+
+    const brushRadius = lineWidth * 2;
+    const blockSize = Math.max(8, Math.floor(lineWidth));
+    const sourceCanvas = mainCanvas;
+
+    // Get the bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x - brushRadius);
+        minY = Math.min(minY, p.y - brushRadius);
+        maxX = Math.max(maxX, p.x + brushRadius);
+        maxY = Math.max(maxY, p.y + brushRadius);
+    }
+
+    minX = Math.max(0, Math.floor(minX));
+    minY = Math.max(0, Math.floor(minY));
+    maxX = Math.min(sourceCanvas.width, Math.ceil(maxX));
+    maxY = Math.min(sourceCanvas.height, Math.ceil(maxY));
+
+    if (maxX <= minX || maxY <= minY) return;
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    // Pre-compute brush mask using canvas (much faster than per-pixel check)
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    maskCtx.fillStyle = 'black';
+    maskCtx.fillRect(0, 0, width, height);
+    maskCtx.strokeStyle = 'white';
+    maskCtx.lineWidth = brushRadius * 2;
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.beginPath();
+    maskCtx.moveTo(points[0].x - minX, points[0].y - minY);
+    for (let i = 1; i < points.length; i++) {
+        maskCtx.lineTo(points[i].x - minX, points[i].y - minY);
+    }
+    maskCtx.stroke();
+    const maskData = maskCtx.getImageData(0, 0, width, height).data;
+
+    // Get combined image data
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = sourceCanvas.width;
+    tempCanvas.height = sourceCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+    tempCtx.drawImage(sourceCanvas, 0, 0);
+    tempCtx.drawImage(drawCanvas, 0, 0);
+
+    const imageData = tempCtx.getImageData(minX, minY, width, height);
+    const data = imageData.data;
+    const currentDrawData = ctx.getImageData(minX, minY, width, height);
+    const output = currentDrawData.data;
+
+    // Apply mosaic using pre-computed mask
+    for (let by = 0; by < height; by += blockSize) {
+        for (let bx = 0; bx < width; bx += blockSize) {
+            let r = 0, g = 0, b = 0, count = 0;
+
+            for (let dy = 0; dy < blockSize && by + dy < height; dy++) {
+                for (let dx = 0; dx < blockSize && bx + dx < width; dx++) {
+                    const px = bx + dx, py = by + dy;
+                    const mi = (py * width + px) * 4;
+                    if (maskData[mi] > 128) {
+                        const i = mi;
+                        r += data[i]; g += data[i + 1]; b += data[i + 2];
+                        count++;
+                    }
+                }
+            }
+
+            if (count > 0) {
+                r = Math.round(r / count);
+                g = Math.round(g / count);
+                b = Math.round(b / count);
+
+                for (let dy = 0; dy < blockSize && by + dy < height; dy++) {
+                    for (let dx = 0; dx < blockSize && bx + dx < width; dx++) {
+                        const px = bx + dx, py = by + dy;
+                        const mi = (py * width + px) * 4;
+                        if (maskData[mi] > 128) {
+                            output[mi] = r; output[mi + 1] = g; output[mi + 2] = b; output[mi + 3] = 255;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ctx.putImageData(new ImageData(output, width, height), minX, minY);
+}
+
+// Apply blur brush effect along path (optimized with pre-computed mask)
+function applyBlurBrush(ctx, points, lineWidth) {
+    if (!points || points.length < 2) return;
+
+    const brushRadius = lineWidth * 2;
+    const blurRadius = 4;
+    const sourceCanvas = mainCanvas;
+
+    // Get the bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x - brushRadius - blurRadius);
+        minY = Math.min(minY, p.y - brushRadius - blurRadius);
+        maxX = Math.max(maxX, p.x + brushRadius + blurRadius);
+        maxY = Math.max(maxY, p.y + brushRadius + blurRadius);
+    }
+
+    minX = Math.max(0, Math.floor(minX));
+    minY = Math.max(0, Math.floor(minY));
+    maxX = Math.min(sourceCanvas.width, Math.ceil(maxX));
+    maxY = Math.min(sourceCanvas.height, Math.ceil(maxY));
+
+    if (maxX <= minX || maxY <= minY) return;
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    // Pre-compute brush mask using canvas
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    maskCtx.fillStyle = 'black';
+    maskCtx.fillRect(0, 0, width, height);
+    maskCtx.strokeStyle = 'white';
+    maskCtx.lineWidth = brushRadius * 2;
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.beginPath();
+    maskCtx.moveTo(points[0].x - minX, points[0].y - minY);
+    for (let i = 1; i < points.length; i++) {
+        maskCtx.lineTo(points[i].x - minX, points[i].y - minY);
+    }
+    maskCtx.stroke();
+    const maskData = maskCtx.getImageData(0, 0, width, height).data;
+
+    // Get combined image data
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = sourceCanvas.width;
+    tempCanvas.height = sourceCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+    tempCtx.drawImage(sourceCanvas, 0, 0);
+    tempCtx.drawImage(drawCanvas, 0, 0);
+
+    const imageData = tempCtx.getImageData(minX, minY, width, height);
+    const data = imageData.data;
+    const currentDrawData = ctx.getImageData(minX, minY, width, height);
+    const output = currentDrawData.data;
+
+    // Fast box blur using separable passes (horizontal then vertical)
+    let current = new Uint8ClampedArray(data);
+    let temp = new Uint8ClampedArray(data.length);
+
+    // 2-pass blur for smoother result
+    for (let pass = 0; pass < 2; pass++) {
+        // Horizontal blur
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                const i = (py * width + px) * 4;
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                    const nx = px + dx;
+                    if (nx >= 0 && nx < width) {
+                        const j = (py * width + nx) * 4;
+                        r += current[j]; g += current[j + 1]; b += current[j + 2];
+                        count++;
+                    }
+                }
+                temp[i] = r / count; temp[i + 1] = g / count; temp[i + 2] = b / count; temp[i + 3] = 255;
+            }
+        }
+        // Vertical blur
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                const i = (py * width + px) * 4;
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                    const ny = py + dy;
+                    if (ny >= 0 && ny < height) {
+                        const j = (ny * width + px) * 4;
+                        r += temp[j]; g += temp[j + 1]; b += temp[j + 2];
+                        count++;
+                    }
+                }
+                current[i] = r / count; current[i + 1] = g / count; current[i + 2] = b / count; current[i + 3] = 255;
+            }
+        }
+    }
+
+    // Copy only masked pixels to output
+    for (let i = 0; i < width * height; i++) {
+        if (maskData[i * 4] > 128) {
+            const idx = i * 4;
+            output[idx] = current[idx];
+            output[idx + 1] = current[idx + 1];
+            output[idx + 2] = current[idx + 2];
+            output[idx + 3] = 255;
+        }
+    }
+
+    ctx.putImageData(new ImageData(output, width, height), minX, minY);
+}
+
+// Apply mosaic brush on specific canvas (for final output, optimized)
+function applyMosaicBrushOnCanvas(ctx, sourceCtx, points, lineWidth) {
+    if (!points || points.length < 2) return;
+
+    const brushRadius = lineWidth * 2;
+    const blockSize = Math.max(8, Math.floor(lineWidth));
+    const sourceCanvas = sourceCtx.canvas;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x - brushRadius);
+        minY = Math.min(minY, p.y - brushRadius);
+        maxX = Math.max(maxX, p.x + brushRadius);
+        maxY = Math.max(maxY, p.y + brushRadius);
+    }
+
+    minX = Math.max(0, Math.floor(minX));
+    minY = Math.max(0, Math.floor(minY));
+    maxX = Math.min(sourceCanvas.width, Math.ceil(maxX));
+    maxY = Math.min(sourceCanvas.height, Math.ceil(maxY));
+
+    if (maxX <= minX || maxY <= minY) return;
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    // Pre-compute brush mask
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    maskCtx.fillStyle = 'black';
+    maskCtx.fillRect(0, 0, width, height);
+    maskCtx.strokeStyle = 'white';
+    maskCtx.lineWidth = brushRadius * 2;
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.beginPath();
+    maskCtx.moveTo(points[0].x - minX, points[0].y - minY);
+    for (let i = 1; i < points.length; i++) {
+        maskCtx.lineTo(points[i].x - minX, points[i].y - minY);
+    }
+    maskCtx.stroke();
+    const maskData = maskCtx.getImageData(0, 0, width, height).data;
+
+    const imageData = sourceCtx.getImageData(minX, minY, width, height);
+    const data = imageData.data;
+    const output = new Uint8ClampedArray(data);
+
+    for (let by = 0; by < height; by += blockSize) {
+        for (let bx = 0; bx < width; bx += blockSize) {
+            let r = 0, g = 0, b = 0, count = 0;
+
+            for (let dy = 0; dy < blockSize && by + dy < height; dy++) {
+                for (let dx = 0; dx < blockSize && bx + dx < width; dx++) {
+                    const px = bx + dx, py = by + dy;
+                    const mi = (py * width + px) * 4;
+                    if (maskData[mi] > 128) {
+                        r += data[mi]; g += data[mi + 1]; b += data[mi + 2];
+                        count++;
+                    }
+                }
+            }
+
+            if (count > 0) {
+                r = Math.round(r / count);
+                g = Math.round(g / count);
+                b = Math.round(b / count);
+
+                for (let dy = 0; dy < blockSize && by + dy < height; dy++) {
+                    for (let dx = 0; dx < blockSize && bx + dx < width; dx++) {
+                        const px = bx + dx, py = by + dy;
+                        const mi = (py * width + px) * 4;
+                        if (maskData[mi] > 128) {
+                            output[mi] = r; output[mi + 1] = g; output[mi + 2] = b; output[mi + 3] = 255;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ctx.putImageData(new ImageData(output, width, height), minX, minY);
+}
+
+// Apply blur brush on specific canvas (for final output, optimized)
+function applyBlurBrushOnCanvas(ctx, sourceCtx, points, lineWidth) {
+    if (!points || points.length < 2) return;
+
+    const brushRadius = lineWidth * 2;
+    const blurRadius = 4;
+    const sourceCanvas = sourceCtx.canvas;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x - brushRadius - blurRadius);
+        minY = Math.min(minY, p.y - brushRadius - blurRadius);
+        maxX = Math.max(maxX, p.x + brushRadius + blurRadius);
+        maxY = Math.max(maxY, p.y + brushRadius + blurRadius);
+    }
+
+    minX = Math.max(0, Math.floor(minX));
+    minY = Math.max(0, Math.floor(minY));
+    maxX = Math.min(sourceCanvas.width, Math.ceil(maxX));
+    maxY = Math.min(sourceCanvas.height, Math.ceil(maxY));
+
+    if (maxX <= minX || maxY <= minY) return;
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    // Pre-compute brush mask
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    maskCtx.fillStyle = 'black';
+    maskCtx.fillRect(0, 0, width, height);
+    maskCtx.strokeStyle = 'white';
+    maskCtx.lineWidth = brushRadius * 2;
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.beginPath();
+    maskCtx.moveTo(points[0].x - minX, points[0].y - minY);
+    for (let i = 1; i < points.length; i++) {
+        maskCtx.lineTo(points[i].x - minX, points[i].y - minY);
+    }
+    maskCtx.stroke();
+    const maskData = maskCtx.getImageData(0, 0, width, height).data;
+
+    const imageData = sourceCtx.getImageData(minX, minY, width, height);
+    const data = imageData.data;
+
+    // Fast separable blur
+    let current = new Uint8ClampedArray(data);
+    let temp = new Uint8ClampedArray(data.length);
+
+    for (let pass = 0; pass < 2; pass++) {
+        // Horizontal blur
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                const i = (py * width + px) * 4;
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                    const nx = px + dx;
+                    if (nx >= 0 && nx < width) {
+                        const j = (py * width + nx) * 4;
+                        r += current[j]; g += current[j + 1]; b += current[j + 2];
+                        count++;
+                    }
+                }
+                temp[i] = r / count; temp[i + 1] = g / count; temp[i + 2] = b / count; temp[i + 3] = 255;
+            }
+        }
+        // Vertical blur
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                const i = (py * width + px) * 4;
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                    const ny = py + dy;
+                    if (ny >= 0 && ny < height) {
+                        const j = (ny * width + px) * 4;
+                        r += temp[j]; g += temp[j + 1]; b += temp[j + 2];
+                        count++;
+                    }
+                }
+                current[i] = r / count; current[i + 1] = g / count; current[i + 2] = b / count; current[i + 3] = 255;
+            }
+        }
+    }
+
+    // Copy only masked pixels
+    for (let i = 0; i < width * height; i++) {
+        if (maskData[i * 4] > 128) {
+            const idx = i * 4;
+            data[idx] = current[idx];
+            data[idx + 1] = current[idx + 1];
+            data[idx + 2] = current[idx + 2];
+            data[idx + 3] = 255;
+        }
+    }
+
+    ctx.putImageData(imageData, minX, minY);
+}
+
+// Fill bucket tool with smart boundary detection
+function applyFillBucket(x, y) {
+    const color = colorPicker.value;
+    const tolerance = 32;
+    const fillColor = hexToRgb(color);
+    if (!fillColor) return;
+
+    const width = mainCanvas.width;
+    const height = mainCanvas.height;
+    const totalPixels = width * height;
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+
+    if (startX < 0 || startX >= width || startY < 0 || startY >= height) return;
+
+    // Create temp canvas with current state
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+    tempCtx.drawImage(mainCanvas, 0, 0);
+    tempCtx.drawImage(drawCanvas, 0, 0);
+
+    const imageData = tempCtx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    const startIdx = (startY * width + startX) * 4;
+    const startColor = { r: data[startIdx], g: data[startIdx+1], b: data[startIdx+2], a: data[startIdx+3] };
+
+    // Skip if clicking on same color
+    if (colorsMatch(startColor, { ...fillColor, a: 255 }, 5)) return;
+
+    // Flood fill to determine area
+    const visited = new Uint8Array(width * height);
+    const stack = [startY * width + startX];
+    let fillCount = 0;
+
+    while (stack.length > 0) {
+        const pos = stack.pop();
+        if (visited[pos]) continue;
+
+        const cx = pos % width;
+        const cy = Math.floor(pos / width);
+        const idx = pos * 4;
+
+        if (!colorsMatch(startColor, { r: data[idx], g: data[idx+1], b: data[idx+2], a: data[idx+3] }, tolerance)) continue;
+
+        visited[pos] = 1;
+        fillCount++;
+
+        if (cx > 0) stack.push(pos - 1);
+        if (cx < width - 1) stack.push(pos + 1);
+        if (cy > 0) stack.push(pos - width);
+        if (cy < height - 1) stack.push(pos + width);
+    }
+
+    // Create fill result
+    const fillData = drawCtx.getImageData(0, 0, width, height);
+    const fd = fillData.data;
+
+    // If fill covers >70% of canvas, fill entire canvas
+    if (fillCount > totalPixels * 0.7) {
+        for (let i = 0; i < fd.length; i += 4) {
+            fd[i] = fillColor.r;
+            fd[i+1] = fillColor.g;
+            fd[i+2] = fillColor.b;
+            fd[i+3] = 255;
+        }
+    } else {
+        // Use flood fill result
+        for (let i = 0; i < visited.length; i++) {
+            if (visited[i]) {
+                const idx = i * 4;
+                fd[idx] = fillColor.r;
+                fd[idx+1] = fillColor.g;
+                fd[idx+2] = fillColor.b;
+                fd[idx+3] = 255;
+            }
+        }
+    }
+
+    drawCtx.putImageData(fillData, 0, 0);
+    drawHistory.push({ shape: 'fillBucket', imageData: drawCtx.getImageData(0, 0, width, height), x: startX, y: startY, color });
+    redoHistory = [];
+    updateUndoRedoButtons();
+}
+
+// Helper functions for fill bucket
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+function colorsMatch(c1, c2, tolerance) {
+    return Math.abs(c1.r - c2.r) <= tolerance &&
+           Math.abs(c1.g - c2.g) <= tolerance &&
+           Math.abs(c1.b - c2.b) <= tolerance &&
+           Math.abs(c1.a - c2.a) <= tolerance;
 }
 
 // Undo, Redo, and clear
@@ -1376,14 +2135,28 @@ function handleResultDragStart(e) {
     const dataUrl = currentResultCanvas.toDataURL(mimeType, quality);
     const filename = `edited-image.${extension}`;
 
-    // Set drag data for external applications (Chrome/Chromium)
-    e.dataTransfer.effectAllowed = 'copy';
+    // Set drag data for external applications
+    e.dataTransfer.effectAllowed = 'copyMove';
 
-    // DownloadURL format allows dragging to desktop/file explorer
-    // Format: mime-type:filename:data-url
+    // Try to add file first (before any setData calls)
+    let fileAdded = false;
+    if (currentResultBlob && e.dataTransfer.items) {
+        try {
+            const file = new File([currentResultBlob], filename, { type: mimeType });
+            e.dataTransfer.items.add(file);
+            fileAdded = true;
+        } catch (err) {
+            console.log('Could not add file to drag:', err);
+        }
+    }
+
+    // DownloadURL format allows dragging to desktop/file explorer (Chrome)
     e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${dataUrl}`);
-    e.dataTransfer.setData('text/uri-list', dataUrl);
-    e.dataTransfer.setData('text/plain', dataUrl);
+
+    // Only add text fallbacks if file wasn't added
+    if (!fileAdded) {
+        e.dataTransfer.setData('text/uri-list', dataUrl);
+    }
 
     // Set drag image
     e.dataTransfer.setDragImage(resultImage, resultImage.width / 2, resultImage.height / 2);
@@ -1395,7 +2168,13 @@ function handleResultDragEnd(e) {
 
 // Export functions
 function generateResultCanvas() {
+    console.log('=== generateResultCanvas START ===');
     if (!image) return null;
+
+    console.log('image dimensions:', image.width, 'x', image.height);
+    console.log('cropState:', JSON.stringify(cropState));
+    console.log('scale:', scale);
+    console.log('drawHistory length:', drawHistory.length);
 
     const actualX = cropState.x / scale;
     const actualY = cropState.y / scale;
@@ -1405,27 +2184,71 @@ function generateResultCanvas() {
     const finalWidth = targetDimensions ? targetDimensions.width : Math.round(actualWidth);
     const finalHeight = targetDimensions ? targetDimensions.height : Math.round(actualHeight);
 
+    // Use integer dimensions to avoid canvas size issues
+    const canvasWidth = Math.round(actualWidth);
+    const canvasHeight = Math.round(actualHeight);
+
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-    tempCanvas.width = actualWidth;
-    tempCanvas.height = actualHeight;
+    tempCanvas.width = canvasWidth;
+    tempCanvas.height = canvasHeight;
+
+    console.log('generateResultCanvas: canvasWidth:', canvasWidth, 'canvasHeight:', canvasHeight);
 
     tempCtx.drawImage(
         image,
         actualX, actualY, actualWidth, actualHeight,
-        0, 0, actualWidth, actualHeight
+        0, 0, canvasWidth, canvasHeight
     );
 
     if (drawHistory.length > 0) {
+        // Create a source canvas for blur/mosaic operations
+        const sourceCanvas = document.createElement('canvas');
+        const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+        sourceCanvas.width = canvasWidth;
+        sourceCanvas.height = canvasHeight;
+        sourceCtx.drawImage(tempCanvas, 0, 0);
+
+        const brushTypes = ['pen', 'marker', 'watercolor', 'crayon', 'highlighter', 'eraser'];
+
         for (const item of drawHistory) {
             tempCtx.save();
 
-            if (item.shape === 'pen' || item.shape === 'highlighter') {
+            if (item.shape === 'fillBucket') {
+                // For fill bucket, we need to scale the imageData
+                if (item.imageData) {
+                    // Create a temp canvas with the stored imageData
+                    const fillCanvas = document.createElement('canvas');
+                    fillCanvas.width = item.imageData.width;
+                    fillCanvas.height = item.imageData.height;
+                    const fillCtx = fillCanvas.getContext('2d', { willReadFrequently: true });
+                    fillCtx.putImageData(item.imageData, 0, 0);
+
+                    // Draw scaled and offset to output
+                    tempCtx.drawImage(
+                        fillCanvas,
+                        cropState.x, cropState.y, cropState.width, cropState.height,
+                        0, 0, canvasWidth, canvasHeight
+                    );
+                }
+            } else if (brushTypes.includes(item.shape)) {
                 const scaledPoints = item.points.map(p => ({
                     x: (p.x - cropState.x) / scale,
                     y: (p.y - cropState.y) / scale
                 }));
-                drawPenStroke(tempCtx, scaledPoints, item.color, item.lineWidth / scale, item.isHighlighter);
+                drawPenStroke(tempCtx, scaledPoints, item.color, item.lineWidth / scale, item.penType || item.shape);
+            } else if (item.shape === 'mosaic') {
+                const scaledPoints = item.points.map(p => ({
+                    x: (p.x - cropState.x) / scale,
+                    y: (p.y - cropState.y) / scale
+                }));
+                applyMosaicBrushOnCanvas(tempCtx, sourceCtx, scaledPoints, item.lineWidth / scale);
+            } else if (item.shape === 'blur') {
+                const scaledPoints = item.points.map(p => ({
+                    x: (p.x - cropState.x) / scale,
+                    y: (p.y - cropState.y) / scale
+                }));
+                applyBlurBrushOnCanvas(tempCtx, sourceCtx, scaledPoints, item.lineWidth / scale);
             } else if (item.shape === 'text') {
                 const scaledX = (item.x - cropState.x) / scale;
                 const scaledY = (item.y - cropState.y) / scale;
@@ -1435,7 +2258,7 @@ function generateResultCanvas() {
                 const scaledY1 = (item.y1 - cropState.y) / scale;
                 const scaledX2 = (item.x2 - cropState.x) / scale;
                 const scaledY2 = (item.y2 - cropState.y) / scale;
-                drawShape(tempCtx, item.shape, scaledX1, scaledY1, scaledX2, scaledY2, item.color, item.lineWidth / scale, item.fill);
+                drawShape(tempCtx, item.shape, scaledX1, scaledY1, scaledX2, scaledY2, item.color, item.lineWidth / scale, item.fill, sourceCtx);
             }
 
             tempCtx.restore();
@@ -1466,6 +2289,14 @@ function getFormatInfo(format) {
 function showResult() {
     currentResultCanvas = generateResultCanvas();
     if (!currentResultCanvas) return;
+
+    const { mimeType } = getFormatInfo(currentFormat);
+    const quality = qualitySlider.value / 100;
+
+    // Pre-generate blob for drag and drop
+    currentResultCanvas.toBlob((blob) => {
+        currentResultBlob = blob;
+    }, mimeType, quality);
 
     resultImage.src = currentResultCanvas.toDataURL('image/png');
     resultTabBtn.disabled = false;

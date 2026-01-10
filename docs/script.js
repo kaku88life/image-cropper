@@ -19,6 +19,7 @@ const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const resultDownloadBtn = document.getElementById('resultDownloadBtn');
 const resultCopyBtn = document.getElementById('resultCopyBtn');
+const resultCloseBtn = document.getElementById('resultCloseBtn');
 const floatingContainer = document.getElementById('floatingContainer');
 const floatingBar = document.getElementById('floatingBar');
 const drawToolbar = document.getElementById('drawToolbar');
@@ -224,6 +225,7 @@ function setupEventListeners() {
     // Result page download/copy buttons
     if (resultDownloadBtn) resultDownloadBtn.addEventListener('click', downloadResultImage);
     if (resultCopyBtn) resultCopyBtn.addEventListener('click', copyResultImageToClipboard);
+    if (resultCloseBtn) resultCloseBtn.addEventListener('click', closeResult);
 
     // Canvas drag-drop for replacing image
     canvasContainer.addEventListener('dragover', handleCanvasDragOver);
@@ -242,6 +244,13 @@ function switchTab(tabName) {
     });
     editTab.classList.toggle('active', tabName === 'edit');
     resultTab.classList.toggle('active', tabName === 'result');
+}
+
+// Close result and go back to edit
+function closeResult() {
+    switchTab('edit');
+    resultImage.src = '';
+    currentResultCanvas = null;
 }
 
 // File handling
@@ -835,7 +844,8 @@ function handleCropMove(clientX, clientY) {
 }
 
 function handleDrawMove(x, y) {
-    if (currentShape === 'pen' || currentShape === 'highlighter') {
+    const penTypes = ['pen', 'highlighter', 'eraser'];
+    if (penTypes.includes(currentShape)) {
         penPoints.push({ x, y });
     }
 
@@ -846,8 +856,8 @@ function handleDrawMove(x, y) {
     const lineWidth = parseInt(strokeWidth.value);
     const fill = fillShape.checked;
 
-    if (currentShape === 'pen' || currentShape === 'highlighter') {
-        drawPenStroke(drawCtx, penPoints, color, lineWidth, currentShape === 'highlighter');
+    if (penTypes.includes(currentShape)) {
+        drawPenStroke(drawCtx, penPoints, color, lineWidth, currentShape);
     } else {
         drawShape(drawCtx, currentShape, drawStart.x, drawStart.y, x, y, color, lineWidth, fill);
     }
@@ -883,14 +893,15 @@ function finalizeDrawing(endX, endY) {
     const color = colorPicker.value;
     const lineWidth = parseInt(strokeWidth.value);
     const fill = fillShape.checked;
+    const penTypes = ['pen', 'highlighter', 'eraser'];
 
-    if (currentShape === 'pen' || currentShape === 'highlighter') {
+    if (penTypes.includes(currentShape)) {
         drawHistory.push({
             shape: currentShape,
             points: [...penPoints],
             color,
             lineWidth,
-            isHighlighter: currentShape === 'highlighter'
+            penType: currentShape
         });
     } else {
         drawHistory.push({
@@ -1088,9 +1099,10 @@ function clearDrawCanvas() {
 }
 
 function redrawHistory() {
+    const penTypes = ['pen', 'highlighter', 'eraser'];
     for (const item of drawHistory) {
-        if (item.shape === 'pen' || item.shape === 'highlighter') {
-            drawPenStroke(drawCtx, item.points, item.color, item.lineWidth, item.isHighlighter);
+        if (penTypes.includes(item.shape)) {
+            drawPenStroke(drawCtx, item.points, item.color, item.lineWidth, item.penType || item.shape);
         } else if (item.shape === 'text') {
             drawText(drawCtx, item.text, item.x, item.y, item.color, item.fontSize);
         } else {
@@ -1099,17 +1111,31 @@ function redrawHistory() {
     }
 }
 
-function drawPenStroke(ctx, points, color, lineWidth, isHighlighter) {
+function drawPenStroke(ctx, points, color, lineWidth, penType) {
     if (points.length < 2) return;
 
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.lineWidth = isHighlighter ? lineWidth * 3 : lineWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (isHighlighter) {
-        ctx.globalAlpha = 0.4;
+    // Handle legacy isHighlighter boolean
+    if (penType === true) penType = 'highlighter';
+    if (penType === false) penType = 'pen';
+
+    switch (penType) {
+        case 'highlighter':
+            ctx.lineWidth = lineWidth * 3;
+            ctx.globalAlpha = 0.4;
+            break;
+        case 'eraser':
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.lineWidth = lineWidth * 2;
+            ctx.globalAlpha = 1;
+            break;
+        default: // pen
+            ctx.lineWidth = lineWidth;
+            ctx.globalAlpha = 0.9;
     }
 
     ctx.beginPath();
@@ -1136,7 +1162,11 @@ function drawText(ctx, text, x, y, color, fontSize) {
     ctx.restore();
 }
 
-function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
+function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill, sourceCtx = null) {
+    if (shape === 'blur' || shape === 'mosaic') {
+        console.log('drawShape:', shape, 'x1:', x1, 'y1:', y1, 'x2:', x2, 'y2:', y2, 'hasSourceCtx:', !!sourceCtx);
+    }
+
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = lineWidth;
@@ -1149,6 +1179,10 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
     const maxY = Math.max(y1, y2);
     const width = maxX - minX;
     const height = maxY - minY;
+
+    if (shape === 'blur' || shape === 'mosaic') {
+        console.log('drawShape calculated:', 'minX:', minX, 'minY:', minY, 'width:', width, 'height:', height);
+    }
 
     switch (shape) {
         case 'rect':
@@ -1185,11 +1219,11 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth, fill) {
             break;
 
         case 'mosaic':
-            applyMosaic(ctx, minX, minY, width, height);
+            applyMosaic(ctx, minX, minY, width, height, sourceCtx);
             break;
 
         case 'blur':
-            applyBlur(ctx, minX, minY, width, height);
+            applyBlur(ctx, minX, minY, width, height, sourceCtx);
             break;
     }
 }
@@ -1211,18 +1245,45 @@ function drawArrow(ctx, x1, y1, x2, y2, lineWidth) {
     ctx.stroke();
 }
 
-function applyMosaic(ctx, x, y, width, height) {
-    if (width < 5 || height < 5) return;
+function applyMosaic(ctx, x, y, width, height, sourceCtx = null) {
+    console.log('applyMosaic called:', { x, y, width, height, hasSourceCtx: !!sourceCtx });
 
-    const canvasX = Math.max(0, Math.floor(x));
-    const canvasY = Math.max(0, Math.floor(y));
-    const canvasW = Math.min(Math.floor(width), mainCanvas.width - canvasX);
-    const canvasH = Math.min(Math.floor(height), mainCanvas.height - canvasY);
+    if (width < 5 || height < 5) {
+        console.log('applyMosaic: early return - size too small');
+        return;
+    }
 
-    if (canvasW <= 0 || canvasH <= 0) return;
+    const source = sourceCtx || mainCtx;
+    const sourceCanvas = source.canvas;
+
+    console.log('applyMosaic: sourceCanvas dimensions:', sourceCanvas.width, 'x', sourceCanvas.height);
+
+    // Calculate the visible portion within canvas bounds
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+    const endX = Math.floor(x + width);
+    const endY = Math.floor(y + height);
+
+    // Clip to canvas bounds
+    const canvasX = Math.max(0, startX);
+    const canvasY = Math.max(0, startY);
+    const canvasEndX = Math.min(sourceCanvas.width, endX);
+    const canvasEndY = Math.min(sourceCanvas.height, endY);
+
+    const canvasW = canvasEndX - canvasX;
+    const canvasH = canvasEndY - canvasY;
+
+    console.log('applyMosaic: clipped region:', { canvasX, canvasY, canvasEndX, canvasEndY, canvasW, canvasH });
+
+    if (canvasW <= 0 || canvasH <= 0) {
+        console.log('applyMosaic: early return - clipped size is zero or negative');
+        return;
+    }
 
     const blockSize = 10;
-    const imageData = mainCtx.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyMosaic: about to getImageData');
+    const imageData = source.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyMosaic: got imageData, size:', imageData.data.length);
     const data = imageData.data;
 
     for (let py = 0; py < canvasH; py += blockSize) {
@@ -1253,17 +1314,44 @@ function applyMosaic(ctx, x, y, width, height) {
     }
 }
 
-function applyBlur(ctx, x, y, width, height) {
-    if (width < 5 || height < 5) return;
+function applyBlur(ctx, x, y, width, height, sourceCtx = null) {
+    console.log('applyBlur called:', { x, y, width, height, hasSourceCtx: !!sourceCtx });
 
-    const canvasX = Math.max(0, Math.floor(x));
-    const canvasY = Math.max(0, Math.floor(y));
-    const canvasW = Math.min(Math.floor(width), mainCanvas.width - canvasX);
-    const canvasH = Math.min(Math.floor(height), mainCanvas.height - canvasY);
+    if (width < 5 || height < 5) {
+        console.log('applyBlur: early return - size too small');
+        return;
+    }
 
-    if (canvasW <= 0 || canvasH <= 0) return;
+    const source = sourceCtx || mainCtx;
+    const sourceCanvas = source.canvas;
 
-    const imageData = mainCtx.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyBlur: sourceCanvas dimensions:', sourceCanvas.width, 'x', sourceCanvas.height);
+
+    // Calculate the visible portion within canvas bounds
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+    const endX = Math.floor(x + width);
+    const endY = Math.floor(y + height);
+
+    // Clip to canvas bounds
+    const canvasX = Math.max(0, startX);
+    const canvasY = Math.max(0, startY);
+    const canvasEndX = Math.min(sourceCanvas.width, endX);
+    const canvasEndY = Math.min(sourceCanvas.height, endY);
+
+    const canvasW = canvasEndX - canvasX;
+    const canvasH = canvasEndY - canvasY;
+
+    console.log('applyBlur: clipped region:', { canvasX, canvasY, canvasEndX, canvasEndY, canvasW, canvasH });
+
+    if (canvasW <= 0 || canvasH <= 0) {
+        console.log('applyBlur: early return - clipped size is zero or negative');
+        return;
+    }
+
+    console.log('applyBlur: about to getImageData');
+    const imageData = source.getImageData(canvasX, canvasY, canvasW, canvasH);
+    console.log('applyBlur: got imageData, size:', imageData.data.length);
     const data = imageData.data;
     const blurRadius = 5;
 
@@ -1296,7 +1384,9 @@ function applyBlur(ctx, x, y, width, height) {
     }
 
     const blurredData = new ImageData(output, canvasW, canvasH);
+    console.log('applyBlur: about to putImageData at', canvasX, canvasY);
     ctx.putImageData(blurredData, canvasX, canvasY);
+    console.log('applyBlur: completed successfully');
 }
 
 // Undo, Redo, and clear
@@ -1395,7 +1485,13 @@ function handleResultDragEnd(e) {
 
 // Export functions
 function generateResultCanvas() {
+    console.log('=== generateResultCanvas START ===');
     if (!image) return null;
+
+    console.log('image dimensions:', image.width, 'x', image.height);
+    console.log('cropState:', JSON.stringify(cropState));
+    console.log('scale:', scale);
+    console.log('drawHistory length:', drawHistory.length);
 
     const actualX = cropState.x / scale;
     const actualY = cropState.y / scale;
@@ -1405,27 +1501,42 @@ function generateResultCanvas() {
     const finalWidth = targetDimensions ? targetDimensions.width : Math.round(actualWidth);
     const finalHeight = targetDimensions ? targetDimensions.height : Math.round(actualHeight);
 
+    // Use integer dimensions to avoid canvas size issues
+    const canvasWidth = Math.round(actualWidth);
+    const canvasHeight = Math.round(actualHeight);
+
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-    tempCanvas.width = actualWidth;
-    tempCanvas.height = actualHeight;
+    tempCanvas.width = canvasWidth;
+    tempCanvas.height = canvasHeight;
+
+    console.log('generateResultCanvas: canvasWidth:', canvasWidth, 'canvasHeight:', canvasHeight);
 
     tempCtx.drawImage(
         image,
         actualX, actualY, actualWidth, actualHeight,
-        0, 0, actualWidth, actualHeight
+        0, 0, canvasWidth, canvasHeight
     );
 
     if (drawHistory.length > 0) {
+        // Create a source canvas for blur/mosaic operations
+        // This ensures we read from the original image, not the canvas we're modifying
+        const sourceCanvas = document.createElement('canvas');
+        const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+        sourceCanvas.width = canvasWidth;
+        sourceCanvas.height = canvasHeight;
+        sourceCtx.drawImage(tempCanvas, 0, 0);
+
         for (const item of drawHistory) {
             tempCtx.save();
 
-            if (item.shape === 'pen' || item.shape === 'highlighter') {
+            const penTypes = ['pen', 'highlighter', 'eraser'];
+            if (penTypes.includes(item.shape)) {
                 const scaledPoints = item.points.map(p => ({
                     x: (p.x - cropState.x) / scale,
                     y: (p.y - cropState.y) / scale
                 }));
-                drawPenStroke(tempCtx, scaledPoints, item.color, item.lineWidth / scale, item.isHighlighter);
+                drawPenStroke(tempCtx, scaledPoints, item.color, item.lineWidth / scale, item.penType || item.shape);
             } else if (item.shape === 'text') {
                 const scaledX = (item.x - cropState.x) / scale;
                 const scaledY = (item.y - cropState.y) / scale;
@@ -1435,7 +1546,12 @@ function generateResultCanvas() {
                 const scaledY1 = (item.y1 - cropState.y) / scale;
                 const scaledX2 = (item.x2 - cropState.x) / scale;
                 const scaledY2 = (item.y2 - cropState.y) / scale;
-                drawShape(tempCtx, item.shape, scaledX1, scaledY1, scaledX2, scaledY2, item.color, item.lineWidth / scale, item.fill);
+                console.log('generateResultCanvas: shape', item.shape, 'original coords:', item.x1, item.y1, item.x2, item.y2);
+                console.log('generateResultCanvas: scaled coords:', scaledX1, scaledY1, scaledX2, scaledY2);
+                console.log('generateResultCanvas: cropState:', cropState, 'scale:', scale);
+                console.log('generateResultCanvas: tempCanvas size:', tempCanvas.width, 'x', tempCanvas.height);
+                // Use sourceCtx for blur/mosaic to read from, write to tempCtx
+                drawShape(tempCtx, item.shape, scaledX1, scaledY1, scaledX2, scaledY2, item.color, item.lineWidth / scale, item.fill, sourceCtx);
             }
 
             tempCtx.restore();

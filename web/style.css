@@ -657,6 +657,48 @@ header h1 {
     border-color: var(--primary);
 }
 
+.text-size-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.text-size-row label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.text-size-row select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: var(--surface);
+    cursor: pointer;
+}
+
+.text-size-row select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.text-size-row input[type="number"] {
+    width: 60px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.text-size-row input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
 .text-input-actions {
     display: flex;
     gap: 8px;
@@ -1051,6 +1093,34 @@ header h1 {
     }
 }
 
+/* Result Tip */
+.result-tip {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: #92400e;
+}
+
+.result-tip p {
+    margin: 0 0 6px 0;
+}
+
+.result-tip ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.result-tip li {
+    margin: 4px 0;
+}
+
+.result-tip strong {
+    color: #78350f;
+}
+
 .result-preview {
     position: relative;
     background: #1e293b;
@@ -1070,6 +1140,10 @@ header h1 {
     display: flex;
     gap: 6px;
     z-index: 50;
+}
+
+.result-close-btn:hover {
+    background: rgba(239, 68, 68, 0.9) !important;
 }
 
 .result-preview img {
@@ -1335,6 +1409,111 @@ footer {
     margin: 0 4px;
 }
 
+/* Tool Dropdown */
+.tool-dropdown {
+    position: relative;
+}
+
+.tool-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.tool-dropdown-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.tool-dropdown-btn.active {
+    background: linear-gradient(135deg, var(--primary) 0%, #818cf8 100%);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(99, 102, 241, 0.4);
+    transform: scale(1.08);
+}
+
+.tool-dropdown-btn .tool-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-dropdown-btn .tool-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.tool-dropdown-btn .dropdown-arrow {
+    font-size: 12px;
+    opacity: 1;
+    color: var(--text);
+}
+
+.tool-dropdown-btn.active .dropdown-arrow {
+    opacity: 1;
+}
+
+.tool-dropdown-menu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1100;
+    min-width: 100px;
+}
+
+.tool-dropdown-menu.visible {
+    display: flex;
+}
+
+.tool-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.tool-option:hover {
+    background: var(--primary-light);
+}
+
+.tool-option.active {
+    background: var(--primary);
+    color: white;
+}
+
+.tool-option svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
 /* Main Floating Bar (lower bar) */
 .floating-bar {
     display: flex;
@@ -1412,9 +1591,11 @@ footer {
 
 .floating-bar .tool-btn.active,
 .draw-toolbar .tool-btn.active {
-    background: var(--primary);
+    background: linear-gradient(135deg, var(--primary) 0%, #818cf8 100%);
     color: white;
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(99, 102, 241, 0.4);
+    transform: scale(1.08);
 }
 
 .floating-bar .tool-btn:disabled,
@@ -1533,6 +1714,16 @@ footer {
     height: 100%;
     border-radius: 3px;
     background: #ff0000;
+}
+
+.color-code-display {
+    font-size: 0.7rem;
+    font-family: monospace;
+    color: var(--text-secondary);
+    background: var(--bg);
+    padding: 4px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
 }
 
 .color-picker-popover {
