@@ -42,6 +42,7 @@ const ratioDropdownMenu = document.getElementById('ratioDropdownMenu');
 const customWidthInput = document.getElementById('customWidth');
 const customHeightInput = document.getElementById('customHeight');
 const applyCustomRatioBtn = document.getElementById('applyCustomRatio');
+const lockRatioCheckbox = document.getElementById('lockRatio');
 
 // Tool dropdown elements
 const penDropdownBtn = document.getElementById('penDropdownBtn');
@@ -161,8 +162,11 @@ function setupEventListeners() {
     if (applyCustomRatioBtn) {
         applyCustomRatioBtn.addEventListener('click', applyCustomRatio);
     }
-    // Prevent dropdown close when clicking inside custom inputs
+    // Prevent dropdown close when clicking inside custom inputs or lock checkbox
     document.querySelectorAll('.custom-ratio-inputs').forEach(el => {
+        el.addEventListener('click', (e) => e.stopPropagation());
+    });
+    document.querySelectorAll('.lock-ratio-label').forEach(el => {
         el.addEventListener('click', (e) => e.stopPropagation());
     });
 
@@ -526,8 +530,8 @@ function setMode(mode) {
     canvasContainer.classList.toggle('crop-mode', mode === 'crop');
     canvasContainer.classList.toggle('draw-mode', mode === 'draw');
 
-    drawTools.classList.toggle('visible', mode === 'draw');
-    drawOptions.classList.toggle('visible', mode === 'draw');
+    if (drawTools) drawTools.classList.toggle('visible', mode === 'draw');
+    if (drawOptions) drawOptions.classList.toggle('visible', mode === 'draw');
 
     if (mode === 'draw' && !document.querySelector('.tool-btn.active')) {
         setShape('pen');
@@ -805,6 +809,9 @@ function resizeCropBox(dx, dy) {
     let newWidth = cropStart.width;
     let newHeight = cropStart.height;
 
+    // Check if ratio should be locked
+    const shouldLockRatio = lockRatioCheckbox && lockRatioCheckbox.checked && currentRatio;
+
     switch (activeHandle) {
         case 'nw':
             newX = cropStart.x + dx;
@@ -842,25 +849,80 @@ function resizeCropBox(dx, dy) {
             break;
     }
 
-    // 自由調整，不鎖定比例
     // 確保最小尺寸
     newWidth = Math.max(minSize, newWidth);
     newHeight = Math.max(minSize, newHeight);
 
+    // 如果鎖定比例，根據拖動的方向調整尺寸
+    if (shouldLockRatio) {
+        const aspectRatio = currentRatio;
+
+        // 根據拖動方向決定以哪個軸為主
+        if (['n', 's'].includes(activeHandle)) {
+            // 上下拖動，以高度為主
+            newWidth = newHeight * aspectRatio;
+        } else if (['e', 'w'].includes(activeHandle)) {
+            // 左右拖動，以寬度為主
+            newHeight = newWidth / aspectRatio;
+        } else {
+            // 角落拖動，取較大的變化
+            const widthFromHeight = newHeight * aspectRatio;
+            const heightFromWidth = newWidth / aspectRatio;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                newHeight = heightFromWidth;
+            } else {
+                newWidth = widthFromHeight;
+            }
+        }
+
+        // 調整位置以保持對角固定
+        if (['nw', 'n', 'ne'].includes(activeHandle)) {
+            newY = cropStart.y + cropStart.height - newHeight;
+        }
+        if (['nw', 'w', 'sw'].includes(activeHandle)) {
+            newX = cropStart.x + cropStart.width - newWidth;
+        }
+    }
+
     // 確保不超出畫布邊界
     if (newX < 0) {
-        newWidth += newX;
-        newX = 0;
+        if (shouldLockRatio) {
+            const overflow = -newX;
+            newX = 0;
+            newWidth -= overflow;
+            newHeight = newWidth / currentRatio;
+        } else {
+            newWidth += newX;
+            newX = 0;
+        }
     }
     if (newY < 0) {
-        newHeight += newY;
-        newY = 0;
+        if (shouldLockRatio) {
+            const overflow = -newY;
+            newY = 0;
+            newHeight -= overflow;
+            newWidth = newHeight * currentRatio;
+        } else {
+            newHeight += newY;
+            newY = 0;
+        }
     }
     if (newX + newWidth > mainCanvas.width) {
-        newWidth = mainCanvas.width - newX;
+        if (shouldLockRatio) {
+            newWidth = mainCanvas.width - newX;
+            newHeight = newWidth / currentRatio;
+        } else {
+            newWidth = mainCanvas.width - newX;
+        }
     }
     if (newY + newHeight > mainCanvas.height) {
-        newHeight = mainCanvas.height - newY;
+        if (shouldLockRatio) {
+            newHeight = mainCanvas.height - newY;
+            newWidth = newHeight * currentRatio;
+        } else {
+            newHeight = mainCanvas.height - newY;
+        }
     }
 
     // 再次確保最小尺寸

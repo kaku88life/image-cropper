@@ -721,6 +721,48 @@ header h1 {
     margin: 4px 0;
 }
 
+/* Section Title Row */
+.section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    margin-top: 10px;
+}
+
+.section-title-row .section-title {
+    margin: 0;
+}
+
+.lock-ratio-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.lock-ratio-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.lock-ratio-label .lock-text {
+    transition: color 0.2s;
+}
+
+.lock-ratio-label:hover {
+    color: var(--primary);
+}
+
+.lock-ratio-label input[type="checkbox"]:checked + .lock-text {
+    color: var(--primary);
+}
+
 /* Custom ratio option */
 .custom-ratio-option {
     display: flex;

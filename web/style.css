@@ -847,6 +847,42 @@ header h1 {
     border-top: 1px solid var(--border);
 }
 
+/* Lock Ratio Label in Floating Bar */
+.floating-group .lock-ratio-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.floating-group .lock-ratio-label:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.floating-group .lock-ratio-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.floating-group .lock-ratio-label .lock-text {
+    transition: color 0.2s;
+}
+
+.floating-group .lock-ratio-label input[type="checkbox"]:checked + .lock-text {
+    color: var(--primary);
+}
+
 .custom-ratio-inputs {
     display: flex;
     align-items: center;
@@ -1025,6 +1061,15 @@ header h1 {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+.result-top-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+    z-index: 50;
 }
 
 .result-preview img {
@@ -1247,7 +1292,6 @@ footer {
     align-items: center;
     gap: 8px;
     z-index: 1000;
-    max-width: 95vw;
 }
 
 .floating-container.visible {
@@ -1264,6 +1308,9 @@ footer {
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
     animation: slideUp 0.2s ease-out;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .floating-container.draw-mode .draw-toolbar {
@@ -1296,6 +1343,9 @@ footer {
     padding: 8px 12px;
     background: var(--surface);
     border-radius: 12px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    flex-shrink: 0;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1303,6 +1353,7 @@ footer {
     display: flex;
     align-items: center;
     gap: 4px;
+    flex-shrink: 0;
 }
 
 /* Mode buttons in floating bar */

@@ -17,6 +17,8 @@ const completeBtn = document.getElementById('completeBtn');
 const resultImage = document.getElementById('resultImage');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
+const resultDownloadBtn = document.getElementById('resultDownloadBtn');
+const resultCopyBtn = document.getElementById('resultCopyBtn');
 const floatingContainer = document.getElementById('floatingContainer');
 const floatingBar = document.getElementById('floatingBar');
 const drawToolbar = document.getElementById('drawToolbar');
@@ -34,6 +36,7 @@ const currentRatioText = document.getElementById('currentRatioText');
 const customWidth = document.getElementById('customWidth');
 const customHeight = document.getElementById('customHeight');
 const applyCustomRatio = document.getElementById('applyCustomRatio');
+const lockRatioCheckbox = document.getElementById('lockRatio');
 
 // Format dropdown elements
 const formatDropdownBtn = document.getElementById('formatDropdownBtn');
@@ -217,6 +220,10 @@ function setupEventListeners() {
     completeBtn.addEventListener('click', showResult);
     downloadBtn.addEventListener('click', downloadImage);
     copyBtn.addEventListener('click', copyImageToClipboard);
+
+    // Result page download/copy buttons
+    if (resultDownloadBtn) resultDownloadBtn.addEventListener('click', downloadResultImage);
+    if (resultCopyBtn) resultCopyBtn.addEventListener('click', copyResultImageToClipboard);
 
     // Canvas drag-drop for replacing image
     canvasContainer.addEventListener('dragover', handleCanvasDragOver);
@@ -913,6 +920,9 @@ function resizeCropBox(dx, dy) {
     let newWidth = cropStart.width;
     let newHeight = cropStart.height;
 
+    // Check if ratio should be locked
+    const shouldLockRatio = lockRatioCheckbox && lockRatioCheckbox.checked && currentRatio;
+
     switch (activeHandle) {
         case 'nw':
             newX = cropStart.x + dx;
@@ -953,19 +963,76 @@ function resizeCropBox(dx, dy) {
     newWidth = Math.max(minSize, newWidth);
     newHeight = Math.max(minSize, newHeight);
 
+    // 如果鎖定比例，根據拖動的方向調整尺寸
+    if (shouldLockRatio) {
+        const aspectRatio = currentRatio;
+
+        // 根據拖動方向決定以哪個軸為主
+        if (['n', 's'].includes(activeHandle)) {
+            // 上下拖動，以高度為主
+            newWidth = newHeight * aspectRatio;
+        } else if (['e', 'w'].includes(activeHandle)) {
+            // 左右拖動，以寬度為主
+            newHeight = newWidth / aspectRatio;
+        } else {
+            // 角落拖動，取較大的變化
+            const widthFromHeight = newHeight * aspectRatio;
+            const heightFromWidth = newWidth / aspectRatio;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                newHeight = heightFromWidth;
+            } else {
+                newWidth = widthFromHeight;
+            }
+        }
+
+        // 調整位置以保持對角固定
+        if (['nw', 'n', 'ne'].includes(activeHandle)) {
+            newY = cropStart.y + cropStart.height - newHeight;
+        }
+        if (['nw', 'w', 'sw'].includes(activeHandle)) {
+            newX = cropStart.x + cropStart.width - newWidth;
+        }
+    }
+
+    // 確保不超出畫布邊界
     if (newX < 0) {
-        newWidth += newX;
-        newX = 0;
+        if (shouldLockRatio) {
+            const overflow = -newX;
+            newX = 0;
+            newWidth -= overflow;
+            newHeight = newWidth / currentRatio;
+        } else {
+            newWidth += newX;
+            newX = 0;
+        }
     }
     if (newY < 0) {
-        newHeight += newY;
-        newY = 0;
+        if (shouldLockRatio) {
+            const overflow = -newY;
+            newY = 0;
+            newHeight -= overflow;
+            newWidth = newHeight * currentRatio;
+        } else {
+            newHeight += newY;
+            newY = 0;
+        }
     }
     if (newX + newWidth > mainCanvas.width) {
-        newWidth = mainCanvas.width - newX;
+        if (shouldLockRatio) {
+            newWidth = mainCanvas.width - newX;
+            newHeight = newWidth / currentRatio;
+        } else {
+            newWidth = mainCanvas.width - newX;
+        }
     }
     if (newY + newHeight > mainCanvas.height) {
-        newHeight = mainCanvas.height - newY;
+        if (shouldLockRatio) {
+            newHeight = mainCanvas.height - newY;
+            newWidth = newHeight * currentRatio;
+        } else {
+            newHeight = mainCanvas.height - newY;
+        }
     }
 
     if (newWidth >= minSize) {
@@ -1449,6 +1516,44 @@ async function copyImageToClipboard() {
         copyBtn.classList.add('error');
         setTimeout(() => {
             copyBtn.classList.remove('error');
+        }, 1500);
+    }
+}
+
+// Result page download function
+function downloadResultImage() {
+    if (!resultImage || !resultImage.src) return;
+
+    const link = document.createElement('a');
+    const { extension } = getFormatInfo(currentFormat);
+    link.download = `edited-image.${extension}`;
+    link.href = resultImage.src;
+    link.click();
+}
+
+// Result page copy function
+async function copyResultImageToClipboard() {
+    if (!resultImage || !resultImage.src) return;
+
+    try {
+        const response = await fetch(resultImage.src);
+        const blob = await response.blob();
+
+        await navigator.clipboard.write([
+            new ClipboardItem({
+                'image/png': blob
+            })
+        ]);
+
+        resultCopyBtn.classList.add('success');
+        setTimeout(() => {
+            resultCopyBtn.classList.remove('success');
+        }, 1500);
+    } catch (err) {
+        console.error('複製失敗:', err);
+        resultCopyBtn.classList.add('error');
+        setTimeout(() => {
+            resultCopyBtn.classList.remove('error');
         }, 1500);
     }
 }
