@@ -366,18 +366,23 @@ function handleResultDragStart(e) {
 
     // Get format settings
     const format = resultFormatSelect.value;
-    const { mimeType } = getFormatInfo(format);
+    const { mimeType, extension } = getFormatInfo(format);
     const quality = 0.9;
 
     // Create data URL for the image
     const dataUrl = currentResultCanvas.toDataURL(mimeType, quality);
+    const filename = `edited-image.${extension}`;
 
-    // Set drag data
+    // Set drag data for external applications (Chrome/Chromium)
     e.dataTransfer.effectAllowed = 'copy';
+
+    // DownloadURL format allows dragging to desktop/file explorer
+    // Format: mime-type:filename:data-url
+    e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${dataUrl}`);
     e.dataTransfer.setData('text/uri-list', dataUrl);
     e.dataTransfer.setData('text/plain', dataUrl);
 
-    // Create drag image
+    // Set drag image
     e.dataTransfer.setDragImage(resultImage, resultImage.width / 2, resultImage.height / 2);
 }
 

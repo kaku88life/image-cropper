@@ -1302,20 +1302,23 @@ function handleResultDragStart(e) {
     resultImage.classList.add('dragging');
 
     // Get format and quality settings
-    const { mimeType } = getFormatInfo(currentFormat);
+    const { mimeType, extension } = getFormatInfo(currentFormat);
     const quality = qualitySlider.value / 100;
 
     // Create data URL for the image
     const dataUrl = currentResultCanvas.toDataURL(mimeType, quality);
+    const filename = `edited-image.${extension}`;
 
-    // Set drag data
+    // Set drag data for external applications (Chrome/Chromium)
     e.dataTransfer.effectAllowed = 'copy';
+
+    // DownloadURL format allows dragging to desktop/file explorer
+    // Format: mime-type:filename:data-url
+    e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${dataUrl}`);
     e.dataTransfer.setData('text/uri-list', dataUrl);
     e.dataTransfer.setData('text/plain', dataUrl);
 
-    // Create drag image
-    const dragImg = new Image();
-    dragImg.src = dataUrl;
+    // Set drag image
     e.dataTransfer.setDragImage(resultImage, resultImage.width / 2, resultImage.height / 2);
 }
 
