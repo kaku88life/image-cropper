@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>圖片編輯工具</h1>
+            <h1><img src="icon.png" alt="" class="title-icon">圖片編輯工具</h1>
             <p class="subtitle">上傳圖片，裁切、加工，輕鬆編輯</p>
         </header>
 
@@ -83,6 +83,17 @@
                             </div>
                             <div class="text-input-container" id="textInputContainer">
                                 <textarea id="textInput" placeholder="輸入文字..."></textarea>
+                                <div class="text-size-row">
+                                    <label>大小:</label>
+                                    <select id="textSizeSelect">
+                                        <option value="16">小 (16)</option>
+                                        <option value="24">中 (24)</option>
+                                        <option value="36" selected>大 (36)</option>
+                                        <option value="48">特大 (48)</option>
+                                        <option value="72">超大 (72)</option>
+                                    </select>
+                                    <input type="number" id="textSizeInput" min="8" max="200" value="36" title="自訂大小">
+                                </div>
                                 <div class="text-input-actions">
                                     <button class="text-btn" id="textConfirm">確定</button>
                                     <button class="text-btn text-btn-cancel" id="textCancel">取消</button>
@@ -95,6 +106,13 @@
 
                 <!-- 結果頁籤內容 -->
                 <div class="tab-content" id="resultTab">
+                    <div class="result-tip">
+                        <p><strong>提示：</strong>如果拖曳到其他應用程式（如 LINE）無法正常顯示圖片：</p>
+                        <ul>
+                            <li>使用<strong>複製按鈕</strong>將圖片複製到剪貼簿，再按 Ctrl+V 貼上</li>
+                            <li>或先<strong>下載圖片</strong>，再從電腦拖曳檔案傳送</li>
+                        </ul>
+                    </div>
                     <div class="result-preview">
                         <!-- 右上角按鈕群組 -->
                         <div class="result-top-actions">
@@ -136,19 +154,74 @@
         <div class="draw-toolbar" id="drawToolbar">
             <!-- 繪圖工具 -->
             <div class="floating-group draw-tools" id="drawTools">
-                <button class="tool-btn" data-shape="pen" title="畫筆">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="highlighter" title="螢光筆">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="m9 11-6 6v3h9l3-3"/>
-                        <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+                <!-- 筆刷下拉選單 -->
+                <div class="tool-dropdown" id="penDropdown">
+                    <button class="tool-dropdown-btn active" id="penDropdownBtn" title="筆刷">
+                        <span class="tool-icon" id="penIcon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                            </svg>
+                        </span>
+                        <span class="dropdown-arrow">▾</span>
+                    </button>
+                    <div class="tool-dropdown-menu" id="penMenu">
+                        <button class="tool-option active" data-shape="pen" title="鉛筆">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                            <span>鉛筆</span>
+                        </button>
+                        <button class="tool-option" data-shape="marker" title="簽字筆">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+                            <span>簽字筆</span>
+                        </button>
+                        <button class="tool-option" data-shape="highlighter" title="螢光筆">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+                            <span>螢光筆</span>
+                        </button>
+                        <button class="tool-option" data-shape="eraser" title="橡皮擦">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/></svg>
+                            <span>橡皮擦</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- 形狀下拉選單 -->
+                <div class="tool-dropdown" id="shapeDropdown">
+                    <button class="tool-dropdown-btn" id="shapeDropdownBtn" title="形狀">
+                        <span class="tool-icon" id="shapeIcon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            </svg>
+                        </span>
+                        <span class="dropdown-arrow">▾</span>
+                    </button>
+                    <div class="tool-dropdown-menu" id="shapeMenu">
+                        <button class="tool-option" data-shape="rect" title="矩形">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span>矩形</span>
+                        </button>
+                        <button class="tool-option" data-shape="circle" title="圓形">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>
+                            <span>圓形</span>
+                        </button>
+                        <button class="tool-option" data-shape="arrow" title="箭頭">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            <span>箭頭</span>
+                        </button>
+                        <button class="tool-option" data-shape="line" title="直線">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20 20 4"/></svg>
+                            <span>直線</span>
+                        </button>
+                    </div>
+                </div>
+                <span class="toolbar-divider"></span>
+                <button class="tool-btn" data-shape="text" title="文字">T</button>
+                <button class="tool-btn fill-toggle" id="fillToggleBtn" title="填色 (形狀填滿開關)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity="0.3"/>
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
                     </svg>
                 </button>
                 <button class="tool-btn" data-shape="mosaic" title="馬賽克">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <rect x="3" y="3" width="7" height="7"/>
                         <rect x="14" y="3" width="7" height="7"/>
                         <rect x="3" y="14" width="7" height="7"/>
@@ -156,45 +229,10 @@
                     </svg>
                 </button>
                 <button class="tool-btn" data-shape="blur" title="模糊">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <circle cx="12" cy="12" r="3"/>
                         <circle cx="12" cy="12" r="6" stroke-dasharray="2 2"/>
                         <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="rect" title="矩形">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="circle" title="圓形">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="9"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="arrow" title="箭頭">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14"/>
-                        <path d="m12 5 7 7-7 7"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="line" title="直線">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 20 20 4"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="text" title="文字">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 7V4h16v3"/>
-                        <path d="M12 4v16"/>
-                        <path d="M8 20h8"/>
-                    </svg>
-                </button>
-                <button class="tool-btn" data-shape="eraser" title="橡皮擦">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
-                        <path d="M22 21H7"/>
-                        <path d="m5 11 9 9"/>
                     </svg>
                 </button>
             </div>
@@ -208,6 +246,7 @@
                     <button class="color-picker-btn" id="colorPickerBtn" title="顏色">
                         <span class="color-preview" id="colorPreview"></span>
                     </button>
+                    <span class="color-code-display" id="colorCodeDisplay">#FF0000</span>
                     <div class="color-picker-popover" id="colorPickerPopover">
                         <div class="color-swatches">
                             <button class="color-swatch" data-color="#000000" style="background:#000000"></button>
@@ -252,7 +291,7 @@
                         </div>
                         <div class="color-custom">
                             <input type="color" id="colorPicker" value="#ff0000">
-                            <input type="text" id="colorHexInput" value="#ff0000" maxlength="7" placeholder="#000000">
+                            <input type="text" id="colorHexInput" value="#FF0000" maxlength="7" placeholder="#000000">
                         </div>
                     </div>
                 </div>
@@ -263,10 +302,6 @@
                         <span class="stroke-dot"></span>
                     </div>
                 </div>
-                <label class="fill-option">
-                    <input type="checkbox" id="fillShape">
-                    填滿
-                </label>
             </div>
 
             <div class="toolbar-divider"></div>
@@ -275,12 +310,14 @@
             <div class="floating-group draw-actions" id="drawActions">
                 <button class="tool-btn" id="undoBtn" title="上一步" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.5"/>
+                        <polyline points="9,14 4,9 9,4"/>
+                        <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
                     </svg>
                 </button>
                 <button class="tool-btn" id="redoBtn" title="下一步" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.5"/>
+                        <polyline points="15,14 20,9 15,4"/>
+                        <path d="M4 20v-7a4 4 0 0 1 4-4h12"/>
                     </svg>
                 </button>
                 <button class="tool-btn" id="clearDrawBtn" title="清除繪圖">
