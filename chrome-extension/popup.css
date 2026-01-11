@@ -439,15 +439,20 @@ header h1 {
 }
 
 .btn-icon {
-    flex: 0;
-    width: 34px;
-    height: 34px;
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--surface);
     border: 1px solid var(--border);
+    aspect-ratio: 1;
 }
 
 .btn-icon:hover {
@@ -456,8 +461,8 @@ header h1 {
 }
 
 .btn-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
 }
 
 .btn-primary svg {
@@ -544,7 +549,7 @@ header h1 {
 }
 
 .result-actions .btn-primary {
-    flex: 1;
+    flex: 0.9;
     display: flex;
     align-items: center;
     justify-content: center;

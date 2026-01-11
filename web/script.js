@@ -115,6 +115,10 @@ let penPoints = [];
 let textPosition = { x: 0, y: 0 };
 let currentResultCanvas = null;
 let currentResultBlob = null;
+let fillEnabled = false;
+
+// Fill toggle button
+const fillToggleBtn = document.getElementById('fillToggleBtn');
 
 // Initialize
 function init() {
@@ -151,6 +155,14 @@ function setupEventListeners() {
             setShape(btn.dataset.shape);
         });
     });
+
+    // Fill toggle button
+    if (fillToggleBtn) {
+        fillToggleBtn.addEventListener('click', () => {
+            fillEnabled = !fillEnabled;
+            fillToggleBtn.classList.toggle('active', fillEnabled);
+        });
+    }
 
     // Tool dropdown buttons
     if (penDropdownBtn) {
@@ -471,7 +483,8 @@ function resetAllSettings() {
     colorHexInput.value = '#FF0000';
     hueSlider.value = 0;
     strokeWidth.value = 3;
-    fillShape.checked = false;
+    fillEnabled = false;
+    if (fillToggleBtn) fillToggleBtn.classList.remove('active');
     updateColorPreview('#ff0000');
     updateStrokePreview();
 
@@ -870,11 +883,6 @@ function handleDrawMouseDown(e) {
         return;
     }
 
-    if (currentShape === 'fill') {
-        applyFillBucket(x, y);
-        return;
-    }
-
     drawStart.x = x;
     drawStart.y = y;
     isDrawing = true;
@@ -894,11 +902,6 @@ function handleDrawTouchStart(e) {
 
     if (currentShape === 'text') {
         showTextInput(x, y);
-        return;
-    }
-
-    if (currentShape === 'fill') {
-        applyFillBucket(x, y);
         return;
     }
 
@@ -969,7 +972,7 @@ function handleDrawMove(x, y) {
             drawPenStroke(drawCtx, penPoints, color, lineWidth, currentShape);
         }
     } else {
-        drawShape(drawCtx, currentShape, drawStart.x, drawStart.y, x, y, color, lineWidth, false);
+        drawShape(drawCtx, currentShape, drawStart.x, drawStart.y, x, y, color, lineWidth, fillEnabled);
     }
 }
 
@@ -1021,7 +1024,7 @@ function finalizeDrawing(endX, endY) {
             y2: endY,
             color,
             lineWidth,
-            fill: false
+            fill: fillEnabled
         });
     }
 
