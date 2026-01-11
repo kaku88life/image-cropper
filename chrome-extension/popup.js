@@ -251,8 +251,8 @@ function showEditor() {
 }
 
 function setupCanvas() {
-    const maxWidth = 276;
-    const maxHeight = 180;
+    const maxWidth = 235;
+    const maxHeight = 153;
 
     const scaleX = maxWidth / image.width;
     const scaleY = maxHeight / image.height;
