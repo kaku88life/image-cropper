@@ -13,16 +13,58 @@ const removeImageBtn = document.getElementById('removeImageBtn');
 const qualitySlider = document.getElementById('qualitySlider');
 const qualityValue = document.getElementById('qualityValue');
 const qualityControl = document.getElementById('qualityControl');
+const qualityDropdownBtn = document.getElementById('qualityDropdownBtn');
+const qualityDropdownMenu = document.getElementById('qualityDropdownMenu');
+const currentQualityText = document.getElementById('currentQualityText');
 const completeBtn = document.getElementById('completeBtn');
 const resultImage = document.getElementById('resultImage');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const resultDownloadBtn = document.getElementById('resultDownloadBtn');
 const resultCopyBtn = document.getElementById('resultCopyBtn');
+const resultShareBtn = document.getElementById('resultShareBtn');
 const resultCloseBtn = document.getElementById('resultCloseBtn');
 const floatingContainer = document.getElementById('floatingContainer');
 const floatingBar = document.getElementById('floatingBar');
 const drawToolbar = document.getElementById('drawToolbar');
+
+// 新增：調整工具列元素
+const adjustmentToolbar = document.getElementById('adjustmentToolbar');
+const filterToolbar = document.getElementById('filterToolbar');
+const brightnessSlider = document.getElementById('brightnessSlider');
+const contrastSlider = document.getElementById('contrastSlider');
+const saturationSlider = document.getElementById('saturationSlider');
+const hueSliderAdjust = document.getElementById('hueSliderAdjust');
+const brightnessValue = document.getElementById('brightnessValue');
+const contrastValue = document.getElementById('contrastValue');
+const saturationValue = document.getElementById('saturationValue');
+const hueValueDisplay = document.getElementById('hueValue');
+
+// 新增：變換工具元素
+const rotateDropdownBtn = document.getElementById('rotateDropdownBtn');
+const rotateMenu = document.getElementById('rotateMenu');
+const flipHBtn = document.getElementById('flipHBtn');
+const flipVBtn = document.getElementById('flipVBtn');
+const resizeBtn = document.getElementById('resizeBtn');
+
+// 新增：更多功能下拉選單元素
+const moreDropdownBtn = document.getElementById('moreDropdownBtn');
+const moreMenu = document.getElementById('moreMenu');
+
+// 新增：檔案操作元素（現在在更多選單內）
+const openUrlBtn = document.getElementById('openUrlBtn');
+const printBtn = document.getElementById('printBtn');
+
+// 新增：資訊/效果工具元素（現在在更多選單內）
+const histogramBtn = document.getElementById('histogramBtn');
+const watermarkBtn = document.getElementById('watermarkBtn');
+
+// 新增：對話框元素
+const urlModal = document.getElementById('urlModal');
+const resizeModal = document.getElementById('resizeModal');
+const watermarkModal = document.getElementById('watermarkModal');
+const histogramPanel = document.getElementById('histogramPanel');
+const histogramCanvas = document.getElementById('histogramCanvas');
 
 // Tab elements
 const tabHeader = document.getElementById('tabHeader');
@@ -89,7 +131,7 @@ let drawCtx = null;
 let image = null;
 let scale = 1;
 let currentMode = 'crop';
-let currentShape = 'rect';
+let currentShape = 'none';  // 初始為 none，需要點選工具才能繪圖
 let currentRatio = 16 / 10;
 let currentFormat = 'png';
 
@@ -116,6 +158,27 @@ let textPosition = { x: 0, y: 0 };
 let currentResultCanvas = null;
 let currentResultBlob = null;
 let fillEnabled = false;
+
+// 新增：調整狀態
+let originalImage = null; // 保存原始圖片供重置
+let adjustmentState = {
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+    hue: 0
+};
+let currentFilter = 'none';
+let watermarkSettings = {
+    type: 'text',
+    text: '',
+    fontSize: 24,
+    color: '#ffffff',
+    opacity: 0.5,
+    position: 'bottom-right',
+    image: null,
+    imageSize: 30,
+    imageOpacity: 0.8
+};
 
 // Fill toggle button
 const fillToggleBtn = document.getElementById('fillToggleBtn');
@@ -214,9 +277,46 @@ function setupEventListeners() {
         }
     });
 
+    // Quality dropdown
+    if (qualityDropdownBtn) {
+        qualityDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            qualityDropdownBtn.classList.toggle('active');
+            qualityDropdownMenu.classList.toggle('visible');
+            // Close other dropdowns
+            formatDropdownBtn?.classList.remove('active');
+            formatDropdownMenu?.classList.remove('visible');
+            ratioDropdownBtn?.classList.remove('active');
+            ratioDropdownMenu?.classList.remove('visible');
+        });
+    }
+
     // Quality slider
     qualitySlider.addEventListener('input', () => {
-        qualityValue.textContent = qualitySlider.value + '%';
+        const val = qualitySlider.value + '%';
+        qualityValue.textContent = val;
+        if (currentQualityText) currentQualityText.textContent = val;
+        // Update preset active state
+        updateQualityPresetActive(parseInt(qualitySlider.value));
+    });
+
+    // Quality presets
+    document.querySelectorAll('.quality-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const quality = parseInt(btn.dataset.quality);
+            qualitySlider.value = quality;
+            qualityValue.textContent = quality + '%';
+            if (currentQualityText) currentQualityText.textContent = quality + '%';
+            updateQualityPresetActive(quality);
+        });
+    });
+
+    // Close quality dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.quality-dropdown-wrapper')) {
+            qualityDropdownBtn?.classList.remove('active');
+            qualityDropdownMenu?.classList.remove('visible');
+        }
     });
 
     // Crop box events
@@ -288,9 +388,10 @@ function setupEventListeners() {
     downloadBtn.addEventListener('click', downloadImage);
     copyBtn.addEventListener('click', copyImageToClipboard);
 
-    // Result page download/copy buttons
+    // Result page download/copy/share buttons
     if (resultDownloadBtn) resultDownloadBtn.addEventListener('click', downloadResultImage);
     if (resultCopyBtn) resultCopyBtn.addEventListener('click', copyResultImageToClipboard);
+    if (resultShareBtn) resultShareBtn.addEventListener('click', shareResultImage);
     if (resultCloseBtn) resultCloseBtn.addEventListener('click', closeResult);
 
     // Canvas drag-drop for replacing image
@@ -301,6 +402,128 @@ function setupEventListeners() {
     // Result image drag events
     resultImage.addEventListener('dragstart', handleResultDragStart);
     resultImage.addEventListener('dragend', handleResultDragEnd);
+
+    // 新增：調整滑桿事件
+    if (brightnessSlider) {
+        brightnessSlider.addEventListener('input', handleAdjustmentChange);
+    }
+    if (contrastSlider) {
+        contrastSlider.addEventListener('input', handleAdjustmentChange);
+    }
+    if (saturationSlider) {
+        saturationSlider.addEventListener('input', handleAdjustmentChange);
+    }
+    if (hueSliderAdjust) {
+        hueSliderAdjust.addEventListener('input', handleAdjustmentChange);
+    }
+
+    // 新增：快速效果按鈕
+    const autoAdjustBtn = document.getElementById('autoAdjustBtn');
+    const grayscaleBtn = document.getElementById('grayscaleBtn');
+    const negativeBtn = document.getElementById('negativeBtn');
+    const resetAdjustBtn = document.getElementById('resetAdjustBtn');
+
+    if (autoAdjustBtn) autoAdjustBtn.addEventListener('click', applyAutoAdjust);
+    if (grayscaleBtn) grayscaleBtn.addEventListener('click', applyGrayscale);
+    if (negativeBtn) negativeBtn.addEventListener('click', applyNegative);
+    if (resetAdjustBtn) resetAdjustBtn.addEventListener('click', resetAdjustments);
+
+    // 新增：濾鏡按鈕
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            applyAdjustmentPreview();
+        });
+    });
+
+    // 新增：變換工具事件
+    if (rotateDropdownBtn) {
+        rotateDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            rotateMenu.classList.toggle('visible');
+            moreMenu?.classList.remove('visible');
+        });
+    }
+    document.querySelectorAll('[data-rotate]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const degrees = parseInt(btn.dataset.rotate);
+            rotateImage(degrees);
+            rotateMenu.classList.remove('visible');
+        });
+    });
+    if (flipHBtn) {
+        flipHBtn.addEventListener('click', () => {
+            flipImage('horizontal');
+            rotateMenu?.classList.remove('visible');
+        });
+    }
+    if (flipVBtn) {
+        flipVBtn.addEventListener('click', () => {
+            flipImage('vertical');
+            rotateMenu?.classList.remove('visible');
+        });
+    }
+    if (resizeBtn) resizeBtn.addEventListener('click', showResizeModal);
+
+    // 新增：更多功能下拉選單事件
+    if (moreDropdownBtn) {
+        moreDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moreMenu.classList.toggle('visible');
+            rotateMenu?.classList.remove('visible');
+        });
+    }
+
+    // 新增：檔案操作事件（現在在更多選單內）
+    if (openUrlBtn) {
+        openUrlBtn.addEventListener('click', () => {
+            showUrlModal();
+            moreMenu?.classList.remove('visible');
+        });
+    }
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            printImage();
+            moreMenu?.classList.remove('visible');
+        });
+    }
+
+    // 新增：資訊/效果工具事件（現在在更多選單內）
+    if (histogramBtn) {
+        histogramBtn.addEventListener('click', () => {
+            toggleHistogramPanel();
+            moreMenu?.classList.remove('visible');
+        });
+    }
+    if (watermarkBtn) {
+        watermarkBtn.addEventListener('click', () => {
+            showWatermarkModal();
+            moreMenu?.classList.remove('visible');
+        });
+    }
+
+    // 新增：取色器事件
+    const eyedropperBtn = document.getElementById('eyedropperBtn');
+    if (eyedropperBtn) {
+        eyedropperBtn.addEventListener('click', () => {
+            toggleEyedropperMode();
+        });
+    }
+
+    // 新增：對話框事件
+    setupModalEvents();
+
+    // 關閉下拉選單
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#rotateDropdown')) {
+            rotateMenu?.classList.remove('visible');
+        }
+        if (!e.target.closest('#moreDropdown')) {
+            moreMenu?.classList.remove('visible');
+        }
+    });
 }
 
 // Tab switching
@@ -444,12 +667,12 @@ function resetToUpload() {
 }
 
 function resetAllSettings() {
+    // 點擊回饋效果（簡單的透明度變化）
     if (resetAllBtn) {
-        resetAllBtn.style.transform = 'rotate(360deg)';
-        resetAllBtn.style.transition = 'transform 0.3s';
+        resetAllBtn.style.opacity = '0.6';
         setTimeout(() => {
-            resetAllBtn.style.transform = '';
-        }, 300);
+            resetAllBtn.style.opacity = '';
+        }, 150);
     }
 
     // Reset ratio
@@ -479,6 +702,11 @@ function resetAllSettings() {
     updateUndoRedoButtons();
 
     // Reset drawing tools
+    currentShape = 'none';
+    document.querySelectorAll('.tool-option').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tool-btn[data-shape]').forEach(btn => btn.classList.remove('active'));
+    if (penDropdownBtn) penDropdownBtn.classList.remove('active');
+    if (shapeDropdownBtn) shapeDropdownBtn.classList.remove('active');
     colorPicker.value = '#ff0000';
     colorHexInput.value = '#FF0000';
     hueSlider.value = 0;
@@ -487,6 +715,27 @@ function resetAllSettings() {
     if (fillToggleBtn) fillToggleBtn.classList.remove('active');
     updateColorPreview('#ff0000');
     updateStrokePreview();
+
+    // Reset adjustments
+    adjustmentState = { brightness: 0, contrast: 0, saturation: 0, hue: 0 };
+    currentFilter = 'none';
+    if (brightnessSlider) brightnessSlider.value = 0;
+    if (contrastSlider) contrastSlider.value = 0;
+    if (saturationSlider) saturationSlider.value = 0;
+    if (hueSliderAdjust) hueSliderAdjust.value = 0;
+    if (brightnessValue) brightnessValue.textContent = '0';
+    if (contrastValue) contrastValue.textContent = '0';
+    if (saturationValue) saturationValue.textContent = '0';
+    if (hueValueDisplay) hueValueDisplay.textContent = '0';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.filter-btn[data-filter="none"]')?.classList.add('active');
+    mainCanvas.style.filter = '';
+
+    // Reset original image if exists
+    if (originalImage) {
+        image = originalImage;
+        originalImage = null;
+    }
 
     // Reset crop box
     if (image) {
@@ -503,6 +752,8 @@ function resetAllSettings() {
     // Reset quality
     qualitySlider.value = 90;
     qualityValue.textContent = '90%';
+    if (currentQualityText) currentQualityText.textContent = '90%';
+    updateQualityPresetActive(90);
 }
 
 function setupCanvas() {
@@ -557,52 +808,99 @@ function setMode(mode) {
 
     canvasContainer.classList.toggle('crop-mode', mode === 'crop');
     canvasContainer.classList.toggle('draw-mode', mode === 'draw');
+    canvasContainer.classList.toggle('adjust-mode', mode === 'adjust');
     floatingContainer.classList.toggle('draw-mode', mode === 'draw');
+    floatingContainer.classList.toggle('adjust-mode', mode === 'adjust');
 
-    if (mode === 'draw' && !document.querySelector('[data-shape].active')) {
-        setShape('pen');
+    // 切換到繪圖模式時，更新游標樣式
+    if (mode === 'draw') {
+        updateDrawCursor();
+    }
+
+    // 調整模式下更新預覽
+    if (mode === 'adjust' && image) {
+        applyAdjustmentPreview();
+    } else if (mode !== 'adjust') {
+        // 離開調整模式時，保持 CSS filter 效果
+        // (不清除，讓用戶可以看到效果)
     }
 }
 
 function setShape(shape) {
-    currentShape = shape;
-
-    const penShapes = ['pen', 'marker', 'highlighter', 'eraser'];
+    const penShapes = ['pen', 'marker', 'highlighter', 'eraser', 'mosaic', 'blur'];
     const geometryShapes = ['rect', 'circle', 'arrow', 'line'];
 
-    // Update active states
+    // 如果點擊同一個工具，則取消選取（切換到 'none' 模式）
+    if (currentShape === shape) {
+        currentShape = 'none';
+    } else {
+        currentShape = shape;
+    }
+
+    const activeShape = currentShape;
+
+    // 清除所有工具的 active 狀態
     document.querySelectorAll('.tool-option').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.shape === shape);
+        btn.classList.remove('active');
     });
     document.querySelectorAll('.tool-btn[data-shape]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.shape === shape);
+        btn.classList.remove('active');
     });
+    if (penDropdownBtn) penDropdownBtn.classList.remove('active');
+    if (shapeDropdownBtn) shapeDropdownBtn.classList.remove('active');
 
-    // Update dropdown button states
-    if (penDropdownBtn) {
-        penDropdownBtn.classList.toggle('active', penShapes.includes(shape));
-    }
-    if (shapeDropdownBtn) {
-        shapeDropdownBtn.classList.toggle('active', geometryShapes.includes(shape));
-    }
+    // 如果有選取工具，設定 active 狀態
+    if (activeShape !== 'none') {
+        // Update active states
+        document.querySelectorAll('.tool-option').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.shape === activeShape);
+        });
+        document.querySelectorAll('.tool-btn[data-shape]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.shape === activeShape);
+        });
 
-    // Update dropdown icons based on selected shape
-    if (penShapes.includes(shape) && penIcon) {
-        const selectedOption = penMenu?.querySelector(`[data-shape="${shape}"] svg`);
-        if (selectedOption) {
-            penIcon.innerHTML = selectedOption.outerHTML;
+        // Update dropdown button states
+        if (penDropdownBtn) {
+            penDropdownBtn.classList.toggle('active', penShapes.includes(activeShape));
+        }
+        if (shapeDropdownBtn) {
+            shapeDropdownBtn.classList.toggle('active', geometryShapes.includes(activeShape));
+        }
+
+        // Update dropdown icons based on selected shape
+        if (penShapes.includes(activeShape) && penIcon) {
+            const selectedOption = penMenu?.querySelector(`[data-shape="${activeShape}"] svg`);
+            if (selectedOption) {
+                penIcon.innerHTML = selectedOption.outerHTML;
+            }
+        }
+        if (geometryShapes.includes(activeShape) && shapeIcon) {
+            const selectedOption = shapeMenu?.querySelector(`[data-shape="${activeShape}"] svg`);
+            if (selectedOption) {
+                shapeIcon.innerHTML = selectedOption.outerHTML;
+            }
         }
     }
-    if (geometryShapes.includes(shape) && shapeIcon) {
-        const selectedOption = shapeMenu?.querySelector(`[data-shape="${shape}"] svg`);
-        if (selectedOption) {
-            shapeIcon.innerHTML = selectedOption.outerHTML;
-        }
-    }
+
+    // 更新游標樣式
+    updateDrawCursor();
 
     // Close dropdown menus
     penMenu?.classList.remove('visible');
     shapeMenu?.classList.remove('visible');
+}
+
+// 更新繪圖游標
+function updateDrawCursor() {
+    if (!drawCanvas) return;
+
+    if (currentShape === 'none') {
+        drawCanvas.style.cursor = 'default';
+    } else if (currentShape === 'text') {
+        drawCanvas.style.cursor = 'text';
+    } else {
+        drawCanvas.style.cursor = 'crosshair';
+    }
 }
 
 // Color picker functions
@@ -792,6 +1090,18 @@ function selectFormat(option) {
     formatDropdownBtn.classList.remove('active');
 }
 
+// Update quality preset button active state
+function updateQualityPresetActive(value) {
+    document.querySelectorAll('.quality-preset').forEach(btn => {
+        const presetValue = parseInt(btn.dataset.quality);
+        if (presetValue === value) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
 function applyCropRatio() {
     if (!currentRatio) return;
 
@@ -878,6 +1188,17 @@ function handleDrawMouseDown(e) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // 沒有選取工具時，不執行任何繪圖操作
+    if (currentShape === 'none') {
+        return;
+    }
+
+    // 處理填色桶工具
+    if (currentShape === 'fillBucket') {
+        applyFillBucket(x, y);
+        return;
+    }
+
     if (currentShape === 'text') {
         showTextInput(x, y);
         return;
@@ -899,6 +1220,11 @@ function handleDrawTouchStart(e) {
     const rect = drawCanvas.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
+
+    // 沒有選取工具時，不執行任何繪圖操作
+    if (currentShape === 'none') {
+        return;
+    }
 
     if (currentShape === 'text') {
         showTextInput(x, y);
@@ -2284,13 +2610,17 @@ function getFormatInfo(format) {
     const formats = {
         'png': { mimeType: 'image/png', extension: 'png' },
         'jpeg': { mimeType: 'image/jpeg', extension: 'jpg' },
-        'webp': { mimeType: 'image/webp', extension: 'webp' }
+        'webp': { mimeType: 'image/webp', extension: 'webp' },
+        'avif': { mimeType: 'image/avif', extension: 'avif' },
+        'bmp': { mimeType: 'image/bmp', extension: 'bmp' },
+        'svg': { mimeType: 'image/svg+xml', extension: 'svg' }
     };
     return formats[format] || formats['png'];
 }
 
 function showResult() {
-    currentResultCanvas = generateResultCanvas();
+    // 使用帶調整的版本
+    currentResultCanvas = generateResultCanvasWithAdjustments();
     if (!currentResultCanvas) return;
 
     const { mimeType } = getFormatInfo(currentFormat);
@@ -2309,26 +2639,129 @@ function showResult() {
 function downloadImage() {
     if (!image) return;
 
-    // Generate result canvas on-the-fly
-    const canvas = generateResultCanvas();
+    // Generate result canvas on-the-fly with adjustments
+    const canvas = generateResultCanvasWithAdjustments();
     if (!canvas) return;
 
     const { mimeType, extension } = getFormatInfo(currentFormat);
     const quality = qualitySlider.value / 100;
 
+    // BMP 格式需要特殊處理
+    if (currentFormat === 'bmp') {
+        const bmpBlob = canvasToBMP(canvas);
+        const link = document.createElement('a');
+        link.download = `edited-image.${extension}`;
+        link.href = URL.createObjectURL(bmpBlob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        return;
+    }
+
+    // SVG 格式：將圖片嵌入 SVG 容器
+    if (currentFormat === 'svg') {
+        const svgBlob = canvasToSVG(canvas);
+        const link = document.createElement('a');
+        link.download = `edited-image.${extension}`;
+        link.href = URL.createObjectURL(svgBlob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        return;
+    }
+
+    // 檢查瀏覽器是否支援該格式
     const dataUrl = canvas.toDataURL(mimeType, quality);
+
+    // 如果瀏覽器不支援該格式，toDataURL 會返回 PNG
+    if (currentFormat !== 'png' && dataUrl.startsWith('data:image/png')) {
+        alert(`您的瀏覽器不支援 ${currentFormat.toUpperCase()} 格式，將改用 PNG 格式下載。`);
+    }
+
     const link = document.createElement('a');
     link.download = `edited-image.${extension}`;
     link.href = dataUrl;
     link.click();
 }
 
+// 將 Canvas 轉換為 BMP 格式
+function canvasToBMP(canvas) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    // BMP 檔案結構
+    const rowSize = Math.floor((24 * width + 31) / 32) * 4;
+    const pixelArraySize = rowSize * height;
+    const fileSize = 54 + pixelArraySize;
+
+    const buffer = new ArrayBuffer(fileSize);
+    const view = new DataView(buffer);
+
+    // BMP 檔頭 (14 bytes)
+    view.setUint8(0, 0x42); // 'B'
+    view.setUint8(1, 0x4D); // 'M'
+    view.setUint32(2, fileSize, true); // 檔案大小
+    view.setUint32(6, 0, true); // 保留
+    view.setUint32(10, 54, true); // 像素資料偏移
+
+    // DIB 標頭 (40 bytes)
+    view.setUint32(14, 40, true); // 標頭大小
+    view.setInt32(18, width, true); // 寬度
+    view.setInt32(22, -height, true); // 高度 (負值表示從上到下)
+    view.setUint16(26, 1, true); // 色彩平面數
+    view.setUint16(28, 24, true); // 每像素位元數
+    view.setUint32(30, 0, true); // 壓縮方式 (無壓縮)
+    view.setUint32(34, pixelArraySize, true); // 圖像大小
+    view.setInt32(38, 2835, true); // 水平解析度 (72 DPI)
+    view.setInt32(42, 2835, true); // 垂直解析度
+    view.setUint32(46, 0, true); // 調色板顏色數
+    view.setUint32(50, 0, true); // 重要顏色數
+
+    // 像素資料 (BGR 順序)
+    let offset = 54;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            view.setUint8(offset++, data[i + 2]); // B
+            view.setUint8(offset++, data[i + 1]); // G
+            view.setUint8(offset++, data[i]);     // R
+        }
+        // 每行需要 4 byte 對齊
+        const padding = rowSize - width * 3;
+        for (let p = 0; p < padding; p++) {
+            view.setUint8(offset++, 0);
+        }
+    }
+
+    return new Blob([buffer], { type: 'image/bmp' });
+}
+
+// 將 Canvas 轉換為 SVG 格式（嵌入點陣圖）
+function canvasToSVG(canvas) {
+    const width = canvas.width;
+    const height = canvas.height;
+    const dataUrl = canvas.toDataURL('image/png');
+
+    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <title>Edited Image</title>
+    <desc>Generated by Image Editor</desc>
+    <image x="0" y="0" width="${width}" height="${height}"
+           xlink:href="${dataUrl}"
+           preserveAspectRatio="none"/>
+</svg>`;
+
+    return new Blob([svgContent], { type: 'image/svg+xml' });
+}
+
 async function copyImageToClipboard() {
     if (!image) return;
 
     try {
-        // Generate result canvas on-the-fly
-        const canvas = generateResultCanvas();
+        // Generate result canvas on-the-fly with adjustments
+        const canvas = generateResultCanvasWithAdjustments();
         if (!canvas) return;
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -2390,6 +2823,935 @@ async function copyResultImageToClipboard() {
             resultCopyBtn.classList.remove('error');
         }, 1500);
     }
+}
+
+// Result page share function using Web Share API
+async function shareResultImage() {
+    if (!resultImage || !resultImage.src) return;
+
+    // Check if Web Share API is available
+    if (!navigator.share) {
+        alert('您的瀏覽器不支援分享功能，請改用複製或下載');
+        return;
+    }
+
+    try {
+        const response = await fetch(resultImage.src);
+        const blob = await response.blob();
+
+        // Get format from result image src
+        const format = currentFormat || 'png';
+        const formatInfo = getFormatInfo(format);
+        const fileName = `image.${formatInfo.extension}`;
+
+        // Create a file from the blob
+        const file = new File([blob], fileName, { type: formatInfo.mimeType });
+
+        // Check if files can be shared
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: '分享圖片',
+                text: '來自圖片編輯工具的圖片'
+            });
+
+            resultShareBtn.classList.add('success');
+            setTimeout(() => {
+                resultShareBtn.classList.remove('success');
+            }, 1500);
+        } else {
+            // Fallback: share without file (just text)
+            await navigator.share({
+                title: '圖片編輯工具',
+                text: '使用圖片編輯工具編輯的圖片'
+            });
+        }
+    } catch (err) {
+        // User cancelled or error occurred
+        if (err.name !== 'AbortError') {
+            console.error('分享失敗:', err);
+            resultShareBtn.classList.add('error');
+            setTimeout(() => {
+                resultShareBtn.classList.remove('error');
+            }, 1500);
+        }
+    }
+}
+
+// ========================================
+// 新增功能：對話框事件設置
+// ========================================
+function setupModalEvents() {
+    // URL 對話框
+    const urlModalClose = document.getElementById('urlModalClose');
+    const urlModalCancel = document.getElementById('urlModalCancel');
+    const urlModalConfirm = document.getElementById('urlModalConfirm');
+    if (urlModalClose) urlModalClose.addEventListener('click', () => hideModal(urlModal));
+    if (urlModalCancel) urlModalCancel.addEventListener('click', () => hideModal(urlModal));
+    if (urlModalConfirm) urlModalConfirm.addEventListener('click', loadImageFromUrl);
+
+    // 調整大小對話框
+    const resizeModalClose = document.getElementById('resizeModalClose');
+    const resizeModalCancel = document.getElementById('resizeModalCancel');
+    const resizeModalConfirm = document.getElementById('resizeModalConfirm');
+    const resizeWidth = document.getElementById('resizeWidth');
+    const resizeHeight = document.getElementById('resizeHeight');
+    const resizeMaintainRatio = document.getElementById('resizeMaintainRatio');
+
+    if (resizeModalClose) resizeModalClose.addEventListener('click', () => hideModal(resizeModal));
+    if (resizeModalCancel) resizeModalCancel.addEventListener('click', () => hideModal(resizeModal));
+    if (resizeModalConfirm) resizeModalConfirm.addEventListener('click', applyResize);
+
+    // 維持比例邏輯
+    let resizeAspectRatio = 1;
+    if (resizeWidth) {
+        resizeWidth.addEventListener('input', () => {
+            if (resizeMaintainRatio?.checked && resizeAspectRatio) {
+                resizeHeight.value = Math.round(resizeWidth.value / resizeAspectRatio);
+            }
+        });
+    }
+    if (resizeHeight) {
+        resizeHeight.addEventListener('input', () => {
+            if (resizeMaintainRatio?.checked && resizeAspectRatio) {
+                resizeWidth.value = Math.round(resizeHeight.value * resizeAspectRatio);
+            }
+        });
+    }
+
+    // 浮水印對話框
+    const watermarkModalClose = document.getElementById('watermarkModalClose');
+    const watermarkModalCancel = document.getElementById('watermarkModalCancel');
+    const watermarkModalConfirm = document.getElementById('watermarkModalConfirm');
+    const watermarkOpacity = document.getElementById('watermarkOpacity');
+    const watermarkOpacityValue = document.getElementById('watermarkOpacityValue');
+    const watermarkImageOpacity = document.getElementById('watermarkImageOpacity');
+    const watermarkImageOpacityValue = document.getElementById('watermarkImageOpacityValue');
+    const watermarkImageSize = document.getElementById('watermarkImageSize');
+    const watermarkImageSizeValue = document.getElementById('watermarkImageSizeValue');
+    const watermarkImageUpload = document.getElementById('watermarkImageUpload');
+    const watermarkImageInput = document.getElementById('watermarkImageInput');
+
+    if (watermarkModalClose) watermarkModalClose.addEventListener('click', () => hideModal(watermarkModal));
+    if (watermarkModalCancel) watermarkModalCancel.addEventListener('click', () => hideModal(watermarkModal));
+    if (watermarkModalConfirm) watermarkModalConfirm.addEventListener('click', applyWatermark);
+
+    // 浮水印類型切換
+    document.querySelectorAll('.watermark-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.watermark-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const type = tab.dataset.type;
+            watermarkSettings.type = type;
+            document.getElementById('watermarkTextContent')?.classList.toggle('hidden', type !== 'text');
+            document.getElementById('watermarkImageContent')?.classList.toggle('hidden', type !== 'image');
+        });
+    });
+
+    // 浮水印位置選擇
+    document.querySelectorAll('.position-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.position-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            watermarkSettings.position = btn.dataset.position;
+        });
+    });
+
+    // 浮水印透明度更新
+    if (watermarkOpacity) {
+        watermarkOpacity.addEventListener('input', () => {
+            if (watermarkOpacityValue) watermarkOpacityValue.textContent = watermarkOpacity.value + '%';
+        });
+    }
+    if (watermarkImageOpacity) {
+        watermarkImageOpacity.addEventListener('input', () => {
+            if (watermarkImageOpacityValue) watermarkImageOpacityValue.textContent = watermarkImageOpacity.value + '%';
+        });
+    }
+    if (watermarkImageSize) {
+        watermarkImageSize.addEventListener('input', () => {
+            if (watermarkImageSizeValue) watermarkImageSizeValue.textContent = watermarkImageSize.value + '%';
+        });
+    }
+
+    // 浮水印圖片上傳
+    if (watermarkImageUpload) {
+        watermarkImageUpload.addEventListener('click', () => watermarkImageInput?.click());
+    }
+    if (watermarkImageInput) {
+        watermarkImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        watermarkSettings.image = img;
+                        watermarkImageUpload.innerHTML = '<p>圖片已選擇</p>';
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // 直方圖面板
+    const histogramPanelClose = document.getElementById('histogramPanelClose');
+    if (histogramPanelClose) histogramPanelClose.addEventListener('click', () => {
+        histogramPanel?.classList.remove('visible');
+    });
+
+    // 直方圖通道切換
+    document.querySelectorAll('.channel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (histogramPanel?.classList.contains('visible')) {
+                generateHistogram(btn.dataset.channel);
+            }
+        });
+    });
+
+    // 點擊外部關閉對話框
+    [urlModal, resizeModal, watermarkModal].forEach(modal => {
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) hideModal(modal);
+            });
+        }
+    });
+}
+
+function showModal(modal) {
+    if (modal) modal.classList.add('visible');
+}
+
+function hideModal(modal) {
+    if (modal) modal.classList.remove('visible');
+}
+
+// ========================================
+// 新增功能：變換功能
+// ========================================
+function rotateImage(degrees) {
+    if (!image) return;
+
+    // 保存原始圖片
+    if (!originalImage) originalImage = image;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    const radians = (degrees * Math.PI) / 180;
+    const sin = Math.abs(Math.sin(radians));
+    const cos = Math.abs(Math.cos(radians));
+
+    // 計算旋轉後的尺寸
+    const newWidth = Math.round(image.width * cos + image.height * sin);
+    const newHeight = Math.round(image.width * sin + image.height * cos);
+
+    tempCanvas.width = newWidth;
+    tempCanvas.height = newHeight;
+
+    tempCtx.translate(newWidth / 2, newHeight / 2);
+    tempCtx.rotate(radians);
+    tempCtx.drawImage(image, -image.width / 2, -image.height / 2);
+
+    const rotatedImage = new Image();
+    rotatedImage.onload = () => {
+        image = rotatedImage;
+        setupCanvas();
+    };
+    rotatedImage.src = tempCanvas.toDataURL('image/png');
+}
+
+function flipImage(direction) {
+    if (!image) return;
+
+    // 保存原始圖片
+    if (!originalImage) originalImage = image;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    tempCanvas.width = image.width;
+    tempCanvas.height = image.height;
+
+    if (direction === 'horizontal') {
+        tempCtx.translate(image.width, 0);
+        tempCtx.scale(-1, 1);
+    } else {
+        tempCtx.translate(0, image.height);
+        tempCtx.scale(1, -1);
+    }
+
+    tempCtx.drawImage(image, 0, 0);
+
+    const flippedImage = new Image();
+    flippedImage.onload = () => {
+        image = flippedImage;
+        setupCanvas();
+    };
+    flippedImage.src = tempCanvas.toDataURL('image/png');
+}
+
+function showResizeModal() {
+    if (!image) return;
+
+    const resizeWidth = document.getElementById('resizeWidth');
+    const resizeHeight = document.getElementById('resizeHeight');
+    const originalSizeText = document.getElementById('originalSizeText');
+
+    if (resizeWidth) resizeWidth.value = image.width;
+    if (resizeHeight) resizeHeight.value = image.height;
+    if (originalSizeText) originalSizeText.textContent = `${image.width} × ${image.height}`;
+
+    showModal(resizeModal);
+}
+
+function applyResize() {
+    if (!image) return;
+
+    const newWidth = parseInt(document.getElementById('resizeWidth')?.value) || image.width;
+    const newHeight = parseInt(document.getElementById('resizeHeight')?.value) || image.height;
+
+    if (newWidth === image.width && newHeight === image.height) {
+        hideModal(resizeModal);
+        return;
+    }
+
+    // 保存原始圖片
+    if (!originalImage) originalImage = image;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    tempCanvas.width = newWidth;
+    tempCanvas.height = newHeight;
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
+    tempCtx.drawImage(image, 0, 0, newWidth, newHeight);
+
+    const resizedImage = new Image();
+    resizedImage.onload = () => {
+        image = resizedImage;
+        setupCanvas();
+        hideModal(resizeModal);
+    };
+    resizedImage.src = tempCanvas.toDataURL('image/png');
+}
+
+// ========================================
+// 新增功能：色彩調整
+// ========================================
+function handleAdjustmentChange() {
+    adjustmentState.brightness = parseInt(brightnessSlider?.value) || 0;
+    adjustmentState.contrast = parseInt(contrastSlider?.value) || 0;
+    adjustmentState.saturation = parseInt(saturationSlider?.value) || 0;
+    adjustmentState.hue = parseInt(hueSliderAdjust?.value) || 0;
+
+    // 更新數值顯示
+    if (brightnessValue) brightnessValue.textContent = adjustmentState.brightness;
+    if (contrastValue) contrastValue.textContent = adjustmentState.contrast;
+    if (saturationValue) saturationValue.textContent = adjustmentState.saturation;
+    if (hueValueDisplay) hueValueDisplay.textContent = adjustmentState.hue;
+
+    applyAdjustmentPreview();
+}
+
+function applyAdjustmentPreview() {
+    if (!image) return;
+
+    // 使用 CSS filter 進行即時預覽
+    const brightness = 100 + adjustmentState.brightness;
+    const contrast = 100 + adjustmentState.contrast;
+    const saturate = 100 + adjustmentState.saturation;
+    const hueRotate = adjustmentState.hue;
+
+    let filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) hue-rotate(${hueRotate}deg)`;
+
+    // 添加濾鏡效果
+    switch (currentFilter) {
+        case 'blackWhite':
+            filterString += ' grayscale(100%)';
+            break;
+        case 'sepia':
+            filterString += ' sepia(80%)';
+            break;
+        case 'vintage':
+            filterString += ' sepia(30%) contrast(90%) brightness(110%)';
+            break;
+    }
+
+    mainCanvas.style.filter = filterString;
+}
+
+function applyAutoAdjust() {
+    // 自動對比度拉伸
+    adjustmentState.brightness = 10;
+    adjustmentState.contrast = 20;
+    adjustmentState.saturation = 10;
+
+    if (brightnessSlider) brightnessSlider.value = adjustmentState.brightness;
+    if (contrastSlider) contrastSlider.value = adjustmentState.contrast;
+    if (saturationSlider) saturationSlider.value = adjustmentState.saturation;
+
+    handleAdjustmentChange();
+}
+
+function applyGrayscale() {
+    currentFilter = 'blackWhite';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.filter-btn[data-filter="blackWhite"]')?.classList.add('active');
+    applyAdjustmentPreview();
+}
+
+function applyNegative() {
+    if (!image) return;
+
+    // 保存原始圖片
+    if (!originalImage) originalImage = image;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = image.width;
+    tempCanvas.height = image.height;
+    tempCtx.drawImage(image, 0, 0);
+
+    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 255 - data[i];       // R
+        data[i + 1] = 255 - data[i + 1]; // G
+        data[i + 2] = 255 - data[i + 2]; // B
+    }
+
+    tempCtx.putImageData(imageData, 0, 0);
+
+    const negativeImage = new Image();
+    negativeImage.onload = () => {
+        image = negativeImage;
+        setupCanvas();
+    };
+    negativeImage.src = tempCanvas.toDataURL('image/png');
+}
+
+function resetAdjustments() {
+    adjustmentState = { brightness: 0, contrast: 0, saturation: 0, hue: 0 };
+    currentFilter = 'none';
+
+    if (brightnessSlider) brightnessSlider.value = 0;
+    if (contrastSlider) contrastSlider.value = 0;
+    if (saturationSlider) saturationSlider.value = 0;
+    if (hueSliderAdjust) hueSliderAdjust.value = 0;
+
+    if (brightnessValue) brightnessValue.textContent = '0';
+    if (contrastValue) contrastValue.textContent = '0';
+    if (saturationValue) saturationValue.textContent = '0';
+    if (hueValueDisplay) hueValueDisplay.textContent = '0';
+
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.filter-btn[data-filter="none"]')?.classList.add('active');
+
+    mainCanvas.style.filter = '';
+
+    // 如果有原始圖片，恢復
+    if (originalImage) {
+        image = originalImage;
+        originalImage = null;
+        setupCanvas();
+    }
+}
+
+// ========================================
+// 新增功能：濾鏡效果（應用到輸出）
+// ========================================
+function applyFilterToCanvas(ctx, filter, width, height) {
+    if (filter === 'none') return;
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    switch (filter) {
+        case 'blackWhite':
+            for (let i = 0; i < data.length; i += 4) {
+                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                data[i] = data[i + 1] = data[i + 2] = avg;
+            }
+            break;
+
+        case 'sepia':
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i + 1], b = data[i + 2];
+                data[i] = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189);
+                data[i + 1] = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168);
+                data[i + 2] = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131);
+            }
+            break;
+
+        case 'sharpen':
+            applyConvolution(ctx, width, height, [
+                0, -1, 0,
+                -1, 5, -1,
+                0, -1, 0
+            ]);
+            return;
+
+        case 'emboss':
+            applyConvolution(ctx, width, height, [
+                -2, -1, 0,
+                -1, 1, 1,
+                0, 1, 2
+            ]);
+            return;
+
+        case 'vignette':
+            applyVignette(ctx, width, height);
+            return;
+
+        case 'vintage':
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, data[i] * 1.1);
+                data[i + 1] = Math.min(255, data[i + 1] * 0.9);
+                data[i + 2] = Math.min(255, data[i + 2] * 0.8);
+            }
+            break;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
+function applyConvolution(ctx, width, height, kernel) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const output = new Uint8ClampedArray(data);
+    const side = Math.round(Math.sqrt(kernel.length));
+    const halfSide = Math.floor(side / 2);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let r = 0, g = 0, b = 0;
+            for (let ky = 0; ky < side; ky++) {
+                for (let kx = 0; kx < side; kx++) {
+                    const px = Math.min(width - 1, Math.max(0, x + kx - halfSide));
+                    const py = Math.min(height - 1, Math.max(0, y + ky - halfSide));
+                    const idx = (py * width + px) * 4;
+                    const weight = kernel[ky * side + kx];
+                    r += data[idx] * weight;
+                    g += data[idx + 1] * weight;
+                    b += data[idx + 2] * weight;
+                }
+            }
+            const i = (y * width + x) * 4;
+            output[i] = Math.min(255, Math.max(0, r));
+            output[i + 1] = Math.min(255, Math.max(0, g));
+            output[i + 2] = Math.min(255, Math.max(0, b));
+        }
+    }
+
+    ctx.putImageData(new ImageData(output, width, height), 0, 0);
+}
+
+function applyVignette(ctx, width, height) {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+            const factor = 1 - Math.pow(dist / maxDist, 2) * 0.7;
+            const i = (y * width + x) * 4;
+            data[i] *= factor;
+            data[i + 1] *= factor;
+            data[i + 2] *= factor;
+        }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
+function applyBrightnessContrast(ctx, width, height, brightness, contrast) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128 + brightness));
+        data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128 + brightness));
+        data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128 + brightness));
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
+// ========================================
+// 新增功能：檔案操作
+// ========================================
+function showUrlModal() {
+    const imageUrlInput = document.getElementById('imageUrlInput');
+    if (imageUrlInput) imageUrlInput.value = '';
+    showModal(urlModal);
+}
+
+function loadImageFromUrl() {
+    const url = document.getElementById('imageUrlInput')?.value?.trim();
+    if (!url) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        ensureMinimumSize(img, 1280, 800, (finalImage) => {
+            image = finalImage;
+            originalImage = null;
+            showEditor();
+            setupCanvas();
+            hideModal(urlModal);
+        });
+    };
+    img.onerror = () => {
+        alert('無法載入圖片，請確認網址是否正確，或圖片是否允許跨域存取。');
+    };
+    img.src = url;
+}
+
+function printImage() {
+    if (!image) return;
+
+    const canvas = generateResultCanvas();
+    if (!canvas) return;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head><title>列印圖片</title></head>
+        <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
+            <img src="${canvas.toDataURL('image/png')}" style="max-width:100%;max-height:100vh;">
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.onload = () => {
+        printWindow.print();
+    };
+}
+
+// ========================================
+// 新增功能：浮水印
+// ========================================
+function showWatermarkModal() {
+    if (!image) return;
+    showModal(watermarkModal);
+}
+
+function applyWatermark() {
+    if (!image) return;
+
+    // 保存原始圖片
+    if (!originalImage) originalImage = image;
+
+    const text = document.getElementById('watermarkText')?.value;
+    const fontFamily = document.getElementById('watermarkFontFamily')?.value || 'Arial, sans-serif';
+    const fontSize = parseInt(document.getElementById('watermarkFontSize')?.value) || 24;
+    const color = document.getElementById('watermarkColor')?.value || '#ffffff';
+    const opacity = (parseInt(document.getElementById('watermarkOpacity')?.value) || 50) / 100;
+    const position = watermarkSettings.position;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = image.width;
+    tempCanvas.height = image.height;
+    tempCtx.drawImage(image, 0, 0);
+
+    tempCtx.globalAlpha = opacity;
+
+    if (watermarkSettings.type === 'text' && text) {
+        tempCtx.font = `${fontSize}px ${fontFamily}`;
+        tempCtx.fillStyle = color;
+
+        const metrics = tempCtx.measureText(text);
+        const textWidth = metrics.width;
+        const textHeight = fontSize;
+        const padding = 20;
+
+        let x, y;
+        switch (position) {
+            case 'top-left': x = padding; y = padding + textHeight; break;
+            case 'top-center': x = (image.width - textWidth) / 2; y = padding + textHeight; break;
+            case 'top-right': x = image.width - textWidth - padding; y = padding + textHeight; break;
+            case 'center-left': x = padding; y = image.height / 2; break;
+            case 'center': x = (image.width - textWidth) / 2; y = image.height / 2; break;
+            case 'center-right': x = image.width - textWidth - padding; y = image.height / 2; break;
+            case 'bottom-left': x = padding; y = image.height - padding; break;
+            case 'bottom-center': x = (image.width - textWidth) / 2; y = image.height - padding; break;
+            case 'bottom-right': default: x = image.width - textWidth - padding; y = image.height - padding; break;
+        }
+
+        tempCtx.fillText(text, x, y);
+    } else if (watermarkSettings.type === 'image' && watermarkSettings.image) {
+        const imgOpacity = (parseInt(document.getElementById('watermarkImageOpacity')?.value) || 80) / 100;
+        const imgSize = (parseInt(document.getElementById('watermarkImageSize')?.value) || 30) / 100;
+
+        tempCtx.globalAlpha = imgOpacity;
+
+        const wmWidth = image.width * imgSize;
+        const wmHeight = (watermarkSettings.image.height / watermarkSettings.image.width) * wmWidth;
+        const padding = 20;
+
+        let x, y;
+        switch (position) {
+            case 'top-left': x = padding; y = padding; break;
+            case 'top-center': x = (image.width - wmWidth) / 2; y = padding; break;
+            case 'top-right': x = image.width - wmWidth - padding; y = padding; break;
+            case 'center-left': x = padding; y = (image.height - wmHeight) / 2; break;
+            case 'center': x = (image.width - wmWidth) / 2; y = (image.height - wmHeight) / 2; break;
+            case 'center-right': x = image.width - wmWidth - padding; y = (image.height - wmHeight) / 2; break;
+            case 'bottom-left': x = padding; y = image.height - wmHeight - padding; break;
+            case 'bottom-center': x = (image.width - wmWidth) / 2; y = image.height - wmHeight - padding; break;
+            case 'bottom-right': default: x = image.width - wmWidth - padding; y = image.height - wmHeight - padding; break;
+        }
+
+        tempCtx.drawImage(watermarkSettings.image, x, y, wmWidth, wmHeight);
+    }
+
+    const watermarkedImage = new Image();
+    watermarkedImage.onload = () => {
+        image = watermarkedImage;
+        setupCanvas();
+        hideModal(watermarkModal);
+    };
+    watermarkedImage.src = tempCanvas.toDataURL('image/png');
+}
+
+// ========================================
+// 新增功能：直方圖
+// ========================================
+function toggleHistogramPanel() {
+    if (!histogramPanel) return;
+    histogramPanel.classList.toggle('visible');
+    if (histogramPanel.classList.contains('visible')) {
+        generateHistogram('rgb');
+    }
+}
+
+function generateHistogram(channel = 'rgb') {
+    if (!image || !histogramCanvas) return;
+
+    const hCtx = histogramCanvas.getContext('2d');
+    const width = histogramCanvas.width;
+    const height = histogramCanvas.height;
+
+    // 取得圖片數據
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = mainCanvas.width;
+    tempCanvas.height = mainCanvas.height;
+    tempCtx.drawImage(mainCanvas, 0, 0);
+    tempCtx.drawImage(drawCanvas, 0, 0);
+
+    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imageData.data;
+
+    // 計算直方圖
+    const histR = new Array(256).fill(0);
+    const histG = new Array(256).fill(0);
+    const histB = new Array(256).fill(0);
+
+    for (let i = 0; i < data.length; i += 4) {
+        histR[data[i]]++;
+        histG[data[i + 1]]++;
+        histB[data[i + 2]]++;
+    }
+
+    // 找到最大值
+    let maxVal = 0;
+    for (let i = 0; i < 256; i++) {
+        if (channel === 'rgb' || channel === 'r') maxVal = Math.max(maxVal, histR[i]);
+        if (channel === 'rgb' || channel === 'g') maxVal = Math.max(maxVal, histG[i]);
+        if (channel === 'rgb' || channel === 'b') maxVal = Math.max(maxVal, histB[i]);
+    }
+
+    // 清除畫布
+    hCtx.fillStyle = '#1a1a2e';
+    hCtx.fillRect(0, 0, width, height);
+
+    // 繪製直方圖
+    const barWidth = width / 256;
+
+    if (channel === 'rgb' || channel === 'r') {
+        hCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        for (let i = 0; i < 256; i++) {
+            const barHeight = (histR[i] / maxVal) * height;
+            hCtx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
+        }
+    }
+
+    if (channel === 'rgb' || channel === 'g') {
+        hCtx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+        for (let i = 0; i < 256; i++) {
+            const barHeight = (histG[i] / maxVal) * height;
+            hCtx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
+        }
+    }
+
+    if (channel === 'rgb' || channel === 'b') {
+        hCtx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+        for (let i = 0; i < 256; i++) {
+            const barHeight = (histB[i] / maxVal) * height;
+            hCtx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
+        }
+    }
+}
+
+// ========================================
+// 新增功能：取色器
+// ========================================
+let isEyedropperActive = false;
+
+function toggleEyedropperMode() {
+    isEyedropperActive = !isEyedropperActive;
+    const eyedropperBtn = document.getElementById('eyedropperBtn');
+
+    if (isEyedropperActive) {
+        eyedropperBtn?.classList.add('active');
+        // 改變游標為吸管
+        mainCanvas.style.cursor = 'crosshair';
+        drawCanvas.style.cursor = 'crosshair';
+
+        // 添加點擊事件來取色
+        mainCanvas.addEventListener('click', eyedropperClickHandler);
+        drawCanvas.addEventListener('click', eyedropperClickHandler);
+    } else {
+        eyedropperBtn?.classList.remove('active');
+        mainCanvas.style.cursor = 'default';
+        updateDrawCursor();
+
+        // 移除取色事件
+        mainCanvas.removeEventListener('click', eyedropperClickHandler);
+        drawCanvas.removeEventListener('click', eyedropperClickHandler);
+    }
+}
+
+function eyedropperClickHandler(e) {
+    if (!isEyedropperActive) return;
+
+    const rect = mainCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    handleEyedropper(x, y);
+}
+
+function handleEyedropper(x, y) {
+    if (!mainCtx) return;
+
+    // 計算實際圖片座標（考慮縮放）
+    const scaleX = mainCanvas.width / mainCanvas.offsetWidth;
+    const scaleY = mainCanvas.height / mainCanvas.offsetHeight;
+    const actualX = Math.floor(x * scaleX);
+    const actualY = Math.floor(y * scaleY);
+
+    // 從主畫布取色
+    const pixel = mainCtx.getImageData(actualX, actualY, 1, 1).data;
+    const color = `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
+
+    // 更新顏色選擇器
+    colorPicker.value = color;
+    colorHexInput.value = color.toUpperCase();
+    updateColorPreview(color);
+    updateSwatchSelection(color);
+
+    // 自動退出取色模式
+    toggleEyedropperMode();
+}
+
+// ========================================
+// 修改匯出功能以應用調整
+// ========================================
+function generateResultCanvasWithAdjustments() {
+    const canvas = generateResultCanvas();
+    if (!canvas) return null;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // 應用亮度對比度
+    if (adjustmentState.brightness !== 0 || adjustmentState.contrast !== 0) {
+        const brightnessValue = adjustmentState.brightness * 2.55;
+        const contrastValue = adjustmentState.contrast * 2.55;
+        applyBrightnessContrast(ctx, width, height, brightnessValue, contrastValue);
+    }
+
+    // 應用飽和度和色調
+    if (adjustmentState.saturation !== 0 || adjustmentState.hue !== 0) {
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i], g = data[i + 1], b = data[i + 2];
+
+            // 轉換到 HSL
+            const max = Math.max(r, g, b) / 255;
+            const min = Math.min(r, g, b) / 255;
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r / 255: h = ((g - b) / 255 / d + (g < b ? 6 : 0)) / 6; break;
+                    case g / 255: h = ((b - r) / 255 / d + 2) / 6; break;
+                    case b / 255: h = ((r - g) / 255 / d + 4) / 6; break;
+                }
+            }
+
+            // 調整色調和飽和度
+            h = (h + adjustmentState.hue / 360) % 1;
+            if (h < 0) h += 1;
+            s = Math.min(1, Math.max(0, s * (1 + adjustmentState.saturation / 100)));
+
+            // 轉回 RGB
+            let r2, g2, b2;
+            if (s === 0) {
+                r2 = g2 = b2 = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r2 = hue2rgb(p, q, h + 1/3);
+                g2 = hue2rgb(p, q, h);
+                b2 = hue2rgb(p, q, h - 1/3);
+            }
+
+            data[i] = Math.round(r2 * 255);
+            data[i + 1] = Math.round(g2 * 255);
+            data[i + 2] = Math.round(b2 * 255);
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    // 應用濾鏡
+    if (currentFilter !== 'none') {
+        applyFilterToCanvas(ctx, currentFilter, width, height);
+    }
+
+    return canvas;
 }
 
 // Initialize
