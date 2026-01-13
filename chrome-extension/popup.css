@@ -22,6 +22,19 @@ body {
     color: var(--text);
     width: 255px;
     min-height: 170px;
+    overflow: hidden;
+}
+
+/* 隱藏滾動條（排除下拉選單） */
+body::-webkit-scrollbar,
+.container::-webkit-scrollbar {
+    display: none;
+}
+
+body,
+.container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .container {
@@ -304,7 +317,7 @@ header h1 {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .ratio-dropdown-btn:hover {
@@ -322,17 +335,39 @@ header h1 {
 
 .ratio-dropdown-menu {
     position: absolute;
-    top: calc(100% + 4px);
+    bottom: calc(100% + 4px);
     left: 0;
     right: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
     z-index: 100;
     display: none;
     max-height: 200px;
-    overflow-y: auto;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+    -ms-overflow-style: auto;
+}
+
+.ratio-dropdown-menu::-webkit-scrollbar {
+    display: block !important;
+    width: 1px !important;
+    height: 0 !important;
+}
+
+.ratio-dropdown-menu::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+.ratio-dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15) !important;
+    border-radius: 1px;
+}
+
+.ratio-dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25) !important;
 }
 
 .ratio-dropdown-menu.visible {
@@ -379,22 +414,45 @@ header h1 {
 }
 
 .custom-ratio-inputs input {
-    width: 50px;
-    padding: 4px;
+    width: 43px;
+    height: 24px;
+    padding: 3px;
     border: 1px solid var(--border);
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-align: center;
+}
+
+/* 隱藏預設的 spinner 按鈕 */
+.custom-ratio-inputs input::-webkit-outer-spin-button,
+.custom-ratio-inputs input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+    display: none;
+}
+
+.custom-ratio-inputs input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.custom-ratio-inputs span {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
 }
 
 .custom-ratio-inputs .apply-btn {
     padding: 4px 6px;
+    height: 24px;
     background: var(--primary);
     color: white;
     border: none;
     border-radius: 4px;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .custom-ratio-inputs .apply-btn:hover {
